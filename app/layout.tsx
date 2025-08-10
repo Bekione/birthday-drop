@@ -16,7 +16,7 @@ const montserrat = Montserrat({
 
 export const metadata: Metadata = {
   title: "Happy Birthday, Boss!",
-  description: "A special surprise page for your boss's birthday!",
+  description: "A special surprise page for Mohammed's birthday!",
 }
 
 export default function RootLayout({
