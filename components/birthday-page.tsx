@@ -22,7 +22,7 @@ const WISHES: WishCardProps[] = [
     id: 1,
     wisher: "Elshaday",
     wish: "Happy Personal New Year!",
-    note: "May this year bring you success, fulfillment, and prosperity in every area of life✨🫶",
+    note: "May this year bring you good vibes and good money only✨🫶",
   },
   {
     id: 2,
@@ -40,19 +40,19 @@ const WISHES: WishCardProps[] = [
     id: 4,
     wisher: "Bereket L.",
     wish: "To a Great Leader!",
-    note: "Thank you for your guidance and vision—wishing you another year of success and happiness!",
+    note: "Thank you for your guidance wishing you another year of success!",
   },
   {
     id: 5,
     wisher: "Etsub",
     wish: "Have a Fantastic Birthday!",
-    note: "May your special day be filled with laughter, happiness, and unforgettable memories!",
+    note: "May your special day be filled with laughter, happiness!",
   },
   {
     id: 6,
     wisher: "Bereket K.",
     wish: "Happy Birthday, Mohammed!",
-    note: "Wishing you endless success, health, and blessings in both life and leadership!",
+    note: "Wishing you endless success, health, and blessings in life!",
   },
   {
     id: 7,
@@ -70,7 +70,7 @@ const WISHES: WishCardProps[] = [
     id: 9,
     wisher: "Anonymous",
     wish: "To the Coolest Boss!",
-    note: "Wishing you a wonderful birthday and a year ahead full of growth, success, and happiness!",
+    note: "Wishing you a wonderful birthday and a year ahead full of growth and happiness!",
   },
 ];
 
