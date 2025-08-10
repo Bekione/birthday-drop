@@ -148,6 +148,16 @@ export function BirthdayPage() {
       />
 
       {isLoading && (
+      <>
+        <div className="hidden">
+      <Image
+        src="/images/boss-cartoon.png"
+        alt=""
+        width={250}
+        height={250}
+        priority
+      />
+    </div>
         <div className="flex min-h-screen flex-col items-center justify-center loading-gradient-bg p-4 text-center text-white">
           <div className="relative mb-8 h-24 w-24 animate-bounce">
             <Image
@@ -168,6 +178,7 @@ export function BirthdayPage() {
               : "Just a moment, the magic is brewing..."}
           </p>
         </div>
+      </>
       )}
 
       {!isLoading && showCelebrateButton && (
