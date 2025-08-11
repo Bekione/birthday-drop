@@ -56,7 +56,7 @@ const WISHES: WishCardProps[] = [
   },
   {
     id: 7,
-    wisher: "Rahel",
+    wisher: "Wengel",
     wish: "Wishing You the Best!",
     note: "May every goal you set this year be achieved with grace and excellence!",
   },
