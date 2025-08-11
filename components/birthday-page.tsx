@@ -197,7 +197,7 @@ export function BirthdayPage() {
 
           <div className="flex min-h-screen flex-col items-center justify-center">
             <header className="mb-8 pt-4 text-center relative">
-            <div className="absolute -top-2 right-4 md:right-8 lg:right-12 transform rotate-12 animate-bounce-slow">
+            <div className="absolute -top-2 right-4 md:right-8 lg:right-12 transform rotate-12">
                 <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-full shadow-lg border-2 border-white">
                   <div className="text-sm font-pacifico">Aug 10, 2025</div>
                 </div>
