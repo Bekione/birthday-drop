@@ -26,7 +26,7 @@ export function WishCard({ wisher, wish, note }: WishCardProps) {
       >
         {/* Front of the card */}
         <div className="absolute flex h-full w-full flex-col items-center justify-center rounded-lg bg-yellow-200 p-4 text-center text-lg font-pacifico text-gray-800 backface-hidden">
-          <p className="text-xl font-bold mb-2">{wisher}</p>
+          <p className="text-xl font-bold mb-2">{wisher}k</p>
           <p>{wish}</p>
           <span className="absolute bottom-2 right-2 text-xs font-montserrat text-gray-500">Tap to flip</span>
         </div>

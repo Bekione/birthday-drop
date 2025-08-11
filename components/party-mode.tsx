@@ -51,7 +51,7 @@ export function PartyMode({ onStopParty }: PartyModeProps) {
     return (
       <Image
         key={i}
-        src={randomBalloonImage || "/placeholder.svg"}
+        src={randomBalloonImage}
         alt="Party balloon"
         width={Math.random() > 0.5 ? 60 : 80} // Randomize size slightly
         height={Math.random() > 0.5 ? 80 : 100} // Randomize size slightly

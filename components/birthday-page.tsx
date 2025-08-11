@@ -177,7 +177,7 @@ export function BirthdayPage() {
           </h1>
           <Button
             onClick={handleCelebrateClick}
-            className="relative overflow-hidden rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-10 py-5 text-2xl font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-pink-600 hover:to-purple-700"
+            className=" mt-8 relative overflow-hidden rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-10 py-5 text-2xl font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-pink-600 hover:to-purple-700"
           >
             Celebrate!
             <span className="absolute -right-2 -top-2 h-10 w-10 animate-ping-slow rounded-full bg-white opacity-20"></span>
@@ -196,7 +196,12 @@ export function BirthdayPage() {
           {isPartyModeActive && <PartyMode onStopParty={() => setIsPartyModeActive(false)} />}
 
           <div className="flex min-h-screen flex-col items-center justify-center">
-            <header className="mb-8 pt-4 text-center">
+            <header className="mb-8 pt-4 text-center relative">
+            <div className="absolute -top-2 right-4 md:right-8 lg:right-12 transform rotate-12 animate-bounce-slow">
+                <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-full shadow-lg border-2 border-white">
+                  <div className="text-sm font-pacifico">Aug 10, 2025</div>
+                </div>
+              </div>
               <h1 className="text-5xl font-pacifico font-extrabold text-purple-700 drop-shadow-lg animate-fade-in-up md:text-6xl lg:text-7xl">
                 <span className="block animate-bounce-text">🎉 Happy Birthday 🎉</span>
                 <span className="block animate-bounce-text-delay mt-2 text-pink-600">Mohammed!</span>
