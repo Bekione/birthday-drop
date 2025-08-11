@@ -1,21 +1,21 @@
-"use client"
+"use client";
 
-import { useState, useEffect, useRef } from "react"
-import Image from "next/image"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Confetti } from "./confetti" // Custom confetti component
-import { CakeInteraction } from "./cake-interaction" // Custom cake component
-import { PartyMode } from "./party-mode" // Custom party mode component
-import { WishCard } from "./wish-card" // Import statement for WishCard component
+import { useState, useEffect, useRef } from "react";
+import Image from "next/image";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { Confetti } from "./confetti"; // Custom confetti component
+import { CakeInteraction } from "./cake-interaction"; // Custom cake component
+import { PartyMode } from "./party-mode"; // Custom party mode component
+import { WishCard } from "./wish-card"; // Import statement for WishCard component
 
 // Define the type for a wish card
 type WishCardProps = {
-  id: number
-  wisher: string
-  wish: string
-  note: string
-}
+  id: number;
+  wisher: string;
+  wish: string;
+  note: string;
+};
 
 const WISHES: WishCardProps[] = [
   {
@@ -79,64 +79,64 @@ const LOADING_MESSAGES = [
   "Igniting the celebration...",
   "Almost ready for the big reveal...",
   "Get ready for a legendary surprise!",
-]
+];
 
 export function BirthdayPage() {
-  const [isLoading, setIsLoading] = useState(true)
-  const [currentLoadingMessageIndex, setCurrentLoadingMessageIndex] = useState(0)
-  const [showCelebrateButton, setShowCelebrateButton] = useState(false) // New state for the button
-  const [showConfetti, setShowConfetti] = useState(false)
-  const [showMainContent, setShowMainContent] = useState(false)
-  const [isPartyModeActive, setIsPartyModeActive] = useState(false)
-  const applauseAudioRef = useRef<HTMLAudioElement>(null)
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentLoadingMessageIndex, setCurrentLoadingMessageIndex] =
+    useState(0);
+  const [showCelebrateButton, setShowCelebrateButton] = useState(false); // New state for the button
+  const [showConfetti, setShowConfetti] = useState(false);
+  const [showMainContent, setShowMainContent] = useState(false);
+  const [isPartyModeActive, setIsPartyModeActive] = useState(false);
+  const applauseAudioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
-    let messageTimer: NodeJS.Timeout
-    let loadingCompleteTimer: NodeJS.Timeout
+    let messageTimer: NodeJS.Timeout;
+    let loadingCompleteTimer: NodeJS.Timeout;
 
     if (isLoading) {
       messageTimer = setInterval(() => {
         setCurrentLoadingMessageIndex((prevIndex) => {
           if (prevIndex < LOADING_MESSAGES.length - 1) {
-            return prevIndex + 1
+            return prevIndex + 1;
           } else {
-            clearInterval(messageTimer)
-            return prevIndex
+            clearInterval(messageTimer);
+            return prevIndex;
           }
-        })
-      }, 2000)
+        });
+      }, 2000);
 
-      loadingCompleteTimer = setTimeout(
-        () => {
-          setIsLoading(false) // Stop showing loading messages
-          setShowCelebrateButton(true) // Show the celebrate button
-        },
-        LOADING_MESSAGES.length * 2000 + 1000,
-      )
+      loadingCompleteTimer = setTimeout(() => {
+        setIsLoading(false); // Stop showing loading messages
+        setShowCelebrateButton(true); // Show the celebrate button
+      }, LOADING_MESSAGES.length * 2000 + 1000);
     }
 
     return () => {
-      clearInterval(messageTimer)
-      clearTimeout(loadingCompleteTimer)
-    }
-  }, [isLoading])
+      clearInterval(messageTimer);
+      clearTimeout(loadingCompleteTimer);
+    };
+  }, [isLoading]);
 
   const handleCelebrateClick = () => {
-    setShowCelebrateButton(false) // Hide the button
-    setShowConfetti(true) // Trigger confetti
+    setShowCelebrateButton(false); // Hide the button
+    setShowConfetti(true); // Trigger confetti
     if (applauseAudioRef.current) {
-      applauseAudioRef.current.play().catch((e) => console.error("Error playing applause:", e))
+      applauseAudioRef.current
+        .play()
+        .catch((e) => console.error("Error playing applause:", e));
     }
-    setTimeout(() => setShowMainContent(true), 500) // Show main content after a slight delay
-  }
+    setTimeout(() => setShowMainContent(true), 500); // Show main content after a slight delay
+  };
 
   const handleWishMade = () => {
-    console.log("Wish made!")
-  }
+    console.log("Wish made!");
+  };
 
   const handlePartyModeToggle = (active: boolean) => {
-    setIsPartyModeActive(active)
-  }
+    setIsPartyModeActive(active);
+  };
 
   return (
     <>
@@ -148,37 +148,37 @@ export function BirthdayPage() {
       />
 
       {isLoading && (
-      <>
-        <div className="hidden">
-      <Image
-        src="/images/boss-cartoon.png"
-        alt=""
-        width={250}
-        height={250}
-        priority
-      />
-    </div>
-        <div className="flex min-h-screen flex-col items-center justify-center loading-gradient-bg p-4 text-center text-white">
-          <div className="relative mb-8 h-24 w-24 animate-bounce">
+        <>
+          <div className="hidden">
             <Image
-              src="/images/cake-lit.png"
-              alt="Bouncing cake"
-              width={96}
-              height={96}
-              className="object-contain drop-shadow-lg"
+              src="/images/boss-cartoon.png"
+              alt=""
+              width={250}
+              height={250}
               priority
             />
           </div>
-          <h1 className="text-3xl font-pacifico font-bold md:text-4xl lg:text-5xl mb-4">
-            {LOADING_MESSAGES[currentLoadingMessageIndex]}
-          </h1>
-          <p className="mt-4 text-lg font-montserrat opacity-80">
-            {currentLoadingMessageIndex === LOADING_MESSAGES.length - 1
-              ? "Prepare for an unforgettable moment!"
-              : "Just a moment, the magic is brewing..."}
-          </p>
-        </div>
-      </>
+          <div className="flex min-h-screen flex-col items-center justify-center loading-gradient-bg p-4 text-center text-white">
+            <div className="relative mb-8 h-24 w-24 animate-bounce">
+              <Image
+                src="/images/cake-lit.png"
+                alt="Bouncing cake"
+                width={96}
+                height={96}
+                className="object-contain drop-shadow-lg"
+                priority
+              />
+            </div>
+            <h1 className="text-3xl font-pacifico font-bold md:text-4xl lg:text-5xl mb-4">
+              {LOADING_MESSAGES[currentLoadingMessageIndex]}
+            </h1>
+            <p className="mt-4 text-lg font-montserrat opacity-80">
+              {currentLoadingMessageIndex === LOADING_MESSAGES.length - 1
+                ? "Prepare for an unforgettable moment!"
+                : "Just a moment, the magic is brewing..."}
+            </p>
+          </div>
+        </>
       )}
 
       {!isLoading && showCelebrateButton && (
@@ -200,22 +200,28 @@ export function BirthdayPage() {
         <div
           className={cn(
             "relative min-h-screen overflow-hidden bg-gradient-to-br from-blue-100 to-teal-200 p-4 pt-8 text-gray-800 font-montserrat",
-            showMainContent ? "opacity-100" : "opacity-0",
+            showMainContent ? "opacity-100" : "opacity-0"
           )}
         >
           {showConfetti && <Confetti />}
-          {isPartyModeActive && <PartyMode onStopParty={() => setIsPartyModeActive(false)} />}
+          {isPartyModeActive && (
+            <PartyMode onStopParty={() => setIsPartyModeActive(false)} />
+          )}
 
           <div className="flex min-h-screen flex-col items-center justify-center">
             <header className="mb-8 pt-4 text-center relative">
-            <div className="absolute -top-2 right-4 md:right-8 lg:right-12 transform rotate-12">
+              <div className="absolute -top-2 right-4 md:right-8 lg:right-12 transform rotate-12">
                 <div className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-4 py-2 rounded-full shadow-lg border-2 border-white">
                   <div className="text-sm font-pacifico">Aug 10, 2025</div>
                 </div>
               </div>
               <h1 className="text-5xl font-pacifico font-extrabold text-purple-700 drop-shadow-lg animate-fade-in-up md:text-6xl lg:text-7xl">
-                <span className="block animate-bounce-text">🎉 Happy Birthday 🎉</span>
-                <span className="block animate-bounce-text-delay mt-2 text-pink-600">Mohammed!</span>
+                <span className="block animate-bounce-text">
+                  🎉 Happy Birthday 🎉
+                </span>
+                <span className="block animate-bounce-text-delay mt-2 text-pink-600">
+                  Mohammed!
+                </span>
               </h1>
             </header>
 
@@ -235,7 +241,12 @@ export function BirthdayPage() {
               </h2>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
                 {WISHES.map((card) => (
-                  <WishCard key={card.id} wisher={card.wisher} wish={card.wish} note={card.note} />
+                  <WishCard
+                    key={card.id}
+                    wisher={card.wisher}
+                    wish={card.wish}
+                    note={card.note}
+                  />
                 ))}
               </div>
             </section>
@@ -263,5 +274,5 @@ export function BirthdayPage() {
         </div>
       )}
     </>
-  )
+  );
 }
