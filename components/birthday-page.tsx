@@ -90,10 +90,17 @@ export function BirthdayPage() {
   const [showMainContent, setShowMainContent] = useState(false);
   const [isPartyModeActive, setIsPartyModeActive] = useState(false);
   const applauseAudioRef = useRef<HTMLAudioElement>(null);
+  const blowAudioRef = useRef<HTMLAudioElement>(null);
+  const partyAudioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     let messageTimer: NodeJS.Timeout;
     let loadingCompleteTimer: NodeJS.Timeout;
+
+    // Proactively preload audio assets
+    if (applauseAudioRef.current) applauseAudioRef.current.load();
+    if (blowAudioRef.current) blowAudioRef.current.load();
+    if (partyAudioRef.current) partyAudioRef.current.load();
 
     if (isLoading) {
       messageTimer = setInterval(() => {
@@ -119,15 +126,56 @@ export function BirthdayPage() {
     };
   }, [isLoading]);
 
-  const handleCelebrateClick = () => {
-    setShowCelebrateButton(false); // Hide the button
-    setShowConfetti(true); // Trigger confetti
-    if (applauseAudioRef.current) {
-      applauseAudioRef.current
-        .play()
-        .catch((e) => console.error("Error playing applause:", e));
+  const handleCelebrate = async () => {
+    // Unlock and prime all audio in a single user gesture
+    try {
+      if (applauseAudioRef.current) {
+        applauseAudioRef.current.currentTime = 0;
+        await applauseAudioRef.current.play();
+      }
+      // Prime other audios muted then pause, so later plays are instant
+      const primes: Promise<any>[] = [];
+      if (partyAudioRef.current) {
+        const a = partyAudioRef.current;
+        const prevMuted = a.muted;
+        a.muted = true;
+        primes.push(
+          a.play()
+            .then(() => {
+              a.pause();
+              a.currentTime = 0;
+              a.muted = prevMuted;
+            })
+            .catch(() => {
+              a.muted = prevMuted;
+            })
+        );
+      }
+      if (blowAudioRef.current) {
+        const a = blowAudioRef.current;
+        const prevMuted = a.muted;
+        a.muted = true;
+        primes.push(
+          a.play()
+            .then(() => {
+              a.pause();
+              a.currentTime = 0;
+              a.muted = prevMuted;
+            })
+            .catch(() => {
+              a.muted = prevMuted;
+            })
+        );
+      }
+      await Promise.all(primes);
+    } catch (error) {
+      console.error('Error playing audio:', error);
+    } finally {
+      setShowConfetti(true);
+      setShowMainContent(true);
+      setIsLoading(false);
+      setShowCelebrateButton(false);
     }
-    setTimeout(() => setShowMainContent(true), 500); // Show main content after a slight delay
   };
 
   const handleWishMade = () => {
@@ -135,6 +183,13 @@ export function BirthdayPage() {
   };
 
   const handlePartyModeToggle = (active: boolean) => {
+    if (active && applauseAudioRef.current) {
+      try {
+        applauseAudioRef.current.pause();
+      } catch (e) {
+        console.warn("Could not pause applause before starting party mode:", e);
+      }
+    }
     setIsPartyModeActive(active);
   };
 
@@ -145,6 +200,22 @@ export function BirthdayPage() {
         ref={applauseAudioRef}
         src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/applause-cheer-236786-cRd3Z8EmJ1B0qHrcUSivSPQHCLwbFU.mp3"
         preload="auto"
+        muted={false}
+        playsInline
+      />
+
+      {/* Preload and keep references for other audios to ensure instant playback later */}
+      <audio
+        ref={blowAudioRef}
+        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/blowing-out-candlewav-14441_g6nn5QhH-vzGojipQh8sF7g1jY6DEuJXS3m7s7x.mp3"
+        preload="auto"
+        playsInline
+      />
+      <audio
+        ref={partyAudioRef}
+        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/happy-birthday-to-you-bossa-nova-style-arrangement-21399-SOn1WYgFsLMiUWvNzhrWRn3ligyGZQ.mp3"
+        preload="auto"
+        playsInline
       />
 
       {isLoading && (
@@ -187,7 +258,7 @@ export function BirthdayPage() {
             The Surprise Awaits!
           </h1>
           <Button
-            onClick={handleCelebrateClick}
+            onClick={handleCelebrate}
             className=" mt-8 relative overflow-hidden rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-10 py-5 text-2xl font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 hover:from-pink-600 hover:to-purple-700"
           >
             Celebrate!
@@ -205,7 +276,7 @@ export function BirthdayPage() {
         >
           {showConfetti && <Confetti />}
           {isPartyModeActive && (
-            <PartyMode onStopParty={() => setIsPartyModeActive(false)} />
+            <PartyMode onStopParty={() => setIsPartyModeActive(false)} partyAudioRef={partyAudioRef} />
           )}
 
           <div className="flex min-h-screen flex-col items-center justify-center">
@@ -255,7 +326,7 @@ export function BirthdayPage() {
               <h2 className="mb-6 text-3xl font-pacifico font-bold text-purple-600 animate-fade-in-up-delay">
                 Make a Wish!
               </h2>
-              <CakeInteraction onWishMade={handleWishMade} />
+              <CakeInteraction onWishMade={handleWishMade} blowAudioRef={blowAudioRef} />
             </section>
 
             <section className="mb-12 flex flex-col items-center">
