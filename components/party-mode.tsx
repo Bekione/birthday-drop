@@ -9,6 +9,7 @@ import { ContinuousConfetti } from "./continuous-confetti"
 
 type PartyModeProps = {
   onStopParty: () => void
+  partyAudioRef?: React.RefObject<HTMLAudioElement | null>
 }
 
 const BALLOON_IMAGES = [
@@ -18,19 +19,23 @@ const BALLOON_IMAGES = [
   "/images/balloon-yellow.png",
 ]
 
-export function PartyMode({ onStopParty }: PartyModeProps) {
-  const audioRef = useRef<HTMLAudioElement>(null)
+export function PartyMode({ onStopParty, partyAudioRef }: PartyModeProps) {
+  const internalAudioRef = useRef<HTMLAudioElement>(null)
+  const audioRef = partyAudioRef ?? internalAudioRef
 
-  const handleCanPlayThrough = () => {
-    if (audioRef.current) {
-      audioRef.current.loop = true
-      audioRef.current.play().catch((error) => {
-        console.error("Error playing audio:", error)
+  const startPlayback = () => {
+    if (!audioRef.current) return
+    audioRef.current.loop = true
+    audioRef.current
+      .play()
+      .catch((error) => {
+        console.error("Error playing party audio:", error)
       })
-    }
   }
 
   useEffect(() => {
+    // Start playback when mounted (audio should be user-primed already)
+    startPlayback()
     return () => {
       if (audioRef.current) {
         try {
@@ -72,12 +77,15 @@ export function PartyMode({ onStopParty }: PartyModeProps) {
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center overflow-hidden bg-black/90">
-      <audio
-        ref={audioRef}
-        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/happy-birthday-to-you-bossa-nova-style-arrangement-21399-SOn1WYgFsLMiUWvNzhrWRn3ligyGZQ.mp3"
-        preload="auto"
-        onCanPlayThrough={handleCanPlayThrough}
-      />
+      {/* Render an internal audio element only if an external ref was not provided */}
+      {!partyAudioRef && (
+        <audio
+          ref={internalAudioRef}
+          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/happy-birthday-to-you-bossa-nova-style-arrangement-21399-SOn1WYgFsLMiUWvNzhrWRn3ligyGZQ.mp3"
+          preload="auto"
+          playsInline
+        />
+      )}
       {balloons}
       <ContinuousConfetti />
       <div className="absolute inset-0 flex items-center justify-center text-center text-white">
