@@ -23,30 +23,26 @@ export function PartyMode({ onStopParty, partyAudioRef }: PartyModeProps) {
   const internalAudioRef = useRef<HTMLAudioElement>(null)
   const audioRef = partyAudioRef ?? internalAudioRef
 
-  const startPlayback = () => {
-    if (!audioRef.current) return
-    audioRef.current.loop = true
-    audioRef.current
-      .play()
-      .catch((error) => {
-        console.error("Error playing party audio:", error)
-      })
-  }
-
   useEffect(() => {
     // Start playback when mounted (audio should be user-primed already)
-    startPlayback()
+    const el = audioRef.current
+    if (el) {
+      el.loop = true
+      el.play().catch((error) => {
+        console.error("Error playing party audio:", error)
+      })
+    }
     return () => {
-      if (audioRef.current) {
+      if (el) {
         try {
-          audioRef.current.pause()
-          audioRef.current.currentTime = 0
+          el.pause()
+          el.currentTime = 0
         } catch (error) {
           console.warn("Error pausing audio during unmount (likely benign AbortError):", error)
         }
       }
     }
-  }, [])
+  }, [audioRef])
 
   const balloons = Array.from({ length: 15 }).map((_, i) => {
     const randomXFactor = Math.random() * 2 - 1

@@ -134,7 +134,7 @@ export function BirthdayPage() {
         await applauseAudioRef.current.play();
       }
       // Prime other audios muted then pause, so later plays are instant
-      const primes: Promise<any>[] = [];
+      const primes: Promise<void>[] = [];
       if (partyAudioRef.current) {
         const a = partyAudioRef.current;
         const prevMuted = a.muted;

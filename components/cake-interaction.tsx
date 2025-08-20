@@ -35,6 +35,12 @@ export function CakeInteraction({ onWishMade, blowAudioRef }: CakeInteractionPro
       setTimeout(() => {
         setCandleLit(false)
         setWishMade(true)
+        // Notify parent that the wish has been made
+        try {
+          onWishMade()
+        } catch {
+          // no-op if not provided
+        }
       }, 300) // A little delay to sync with sound
     }
   }
