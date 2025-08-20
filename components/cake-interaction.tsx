@@ -1,16 +1,19 @@
 "use client"
 
+import type React from "react"
 import { useState, useRef, useEffect } from "react"
 import Image from "next/image"
 
 type CakeInteractionProps = {
   onWishMade: () => void
+  blowAudioRef?: React.RefObject<HTMLAudioElement | null>
 }
 
-export function CakeInteraction({ onWishMade }: CakeInteractionProps) {
+export function CakeInteraction({ onWishMade, blowAudioRef }: CakeInteractionProps) {
   const [candleLit, setCandleLit] = useState(false)
   const [wishMade, setWishMade] = useState(false)
-  const audioRef = useRef<HTMLAudioElement>(null)
+  const internalAudioRef = useRef<HTMLAudioElement>(null)
+  const audioRef = blowAudioRef ?? internalAudioRef
 
   // Preload the lit cake image
   useEffect(() => {
@@ -55,11 +58,15 @@ export function CakeInteraction({ onWishMade }: CakeInteractionProps) {
         {candleLit && "Make a wish! Then click to blow out."}
         {wishMade && "Wish made! Happy Birthday!"}
       </p>
-      <audio
-        ref={audioRef}
-        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/blowing-out-candlewav-14441_g6nn5QhH-vzGojipQh8sF7g1jY6DEuJXS3m7s7x.mp3"
-        preload="auto"
-      />
+      {/* Only render an internal audio element if an external ref wasn't provided */}
+      {!blowAudioRef && (
+        <audio
+          ref={internalAudioRef}
+          src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/blowing-out-candlewav-14441_g6nn5QhH-vzGojipQh8sF7g1jY6DEuJXS3m7s7x.mp3"
+          preload="auto"
+          playsInline
+        />
+      )}
     </div>
   )
 }
