@@ -1,0 +1,51 @@
+// v7: output points to app/generated/prisma — no url/directUrl here
+generator client {
+  provider = "prisma-client"
+  output   = "../app/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Event {
+  id               String    @id @default(cuid())
+  personName       String
+  personPhotoUrl   String?
+  birthDate        String
+  wishToken        String    @unique @default(uuid())
+  surpriseToken    String    @unique @default(uuid())
+  theme            String    @default("confetti")
+  audioConfig      Json      @default("{\"loop\":true,\"volume\":0.7,\"autoplay\":false}")
+  wishDeadline     DateTime?
+  adminPasswordHash String
+  allowAnonymous   Boolean   @default(true)
+  teaserMessage    String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  wishes      Wish[]
+  audioTracks AudioTrack[]
+}
+
+model Wish {
+  id          String   @id @default(cuid())
+  eventId     String
+  wisherName  String   @default("Anonymous")
+  message     String
+  reactions   Json     @default("{}")
+  submittedAt DateTime @default(now())
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
+
+model AudioTrack {
+  id        String  @id @default(cuid())
+  eventId   String
+  title     String
+  url       String
+  isDefault Boolean @default(false)
+  order     Int     @default(0)
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+}
