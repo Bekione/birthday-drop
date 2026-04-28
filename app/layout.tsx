@@ -1,34 +1,53 @@
-import type { Metadata } from "next"
-import { Pacifico, Montserrat } from 'next/font/google'
-import "./globals.css"
+import type { Metadata } from "next";
+import { Pacifico, Montserrat, Playfair_Display } from "next/font/google";
+import "./globals.css";
 
-// Define the fonts
 const pacifico = Pacifico({
-  subsets: ["latin"],
+  variable: "--font-pacifico",
   weight: "400",
-  variable: "--font-pacifico", // Custom CSS variable for Pacifico
-})
+  subsets: ["latin"],
+  display: "swap",
+});
 
 const montserrat = Montserrat({
+  variable: "--font-montserrat",
   subsets: ["latin"],
-  variable: "--font-montserrat", // Custom CSS variable for Montserrat
-})
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  variable: "--font-playfair",
+  subsets: ["latin"],
+  display: "swap",
+});
 
 export const metadata: Metadata = {
-  title: "Happy Birthday, Boss!",
-  description: "A special surprise page for Mohammed's birthday!",
-}
+  title: "BirthdayDrop — Surprise the people you love 🎉",
+  description:
+    "Create a beautiful birthday surprise page, collect heartfelt wishes from colleagues or friends via a secret link, and reveal them all on the big day.",
+  keywords: [
+    "birthday surprise",
+    "birthday wishes",
+    "team surprise",
+    "birthday celebration",
+  ],
+  openGraph: {
+    title: "BirthdayDrop — Surprise the people you love 🎉",
+    description:
+      "Create a beautiful birthday surprise page and collect wishes from everyone!",
+    type: "website",
+  },
+};
 
 export default function RootLayout({
   children,
-}: Readonly<{
-  children: React.ReactNode
-}>) {
+}: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <body className={`${pacifico.variable} ${montserrat.variable}`}>
-        {children}
-      </body>
+    <html
+      lang="en"
+      className={`${pacifico.variable} ${montserrat.variable} ${playfair.variable}`}
+    >
+      <body className="antialiased">{children}</body>
     </html>
-  )
+  );
 }
