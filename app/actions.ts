@@ -1,6 +1,7 @@
 "use server";
 
 import { db } from "@/lib/db";
+import { Prisma } from "../app/generated/prisma/client";
 import bcrypt from "bcryptjs";
 import { generateToken } from "@/lib/tokens";
 import { DEFAULT_AUDIO_TRACKS } from "@/lib/themes";
@@ -107,7 +108,7 @@ export async function updateEvent(
     wishDeadline: string | null;
     allowAnonymous: boolean;
     teaserMessage: string;
-    audioConfig: Record<string, unknown>;
+    audioConfig: Prisma.InputJsonValue;
   }>,
 ) {
   await db.event.update({
@@ -125,7 +126,9 @@ export async function updateEvent(
       ...(data.teaserMessage !== undefined && {
         teaserMessage: data.teaserMessage,
       }),
-      ...(data.audioConfig !== undefined && { audioConfig: data.audioConfig }),
+      ...(data.audioConfig !== undefined && {
+        audioConfig: data.audioConfig as Prisma.InputJsonValue,
+      }),
     },
   });
   revalidatePath(`/admin/${eventId}`);
