@@ -25,7 +25,7 @@ export function Logo({ size = "md", href = "/" }: LogoProps) {
         priority
       />
       <span
-        className={`${text} font-bold leading-none`}
+        className={`${text} font-bold leading-none text-[#9e73da]`}
         style={{ fontFamily: "var(--font-adlam)" }}
       >
         BirthdayDrop

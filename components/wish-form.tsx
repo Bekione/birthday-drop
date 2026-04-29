@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { submitWish } from "@/app/wish/[token]/actions";
+import { Logo } from "@/components/logo";
 
 interface WishFormProps {
   token: string;
@@ -57,7 +58,7 @@ export function WishForm({
             Wish submitted!
           </h1>
           <p className="text-gray-500 mb-6">
-            Your birthday wish for{" "}<strong>{personName}</strong>{" "}has been saved.
+            Your birthday wish for <strong>{personName}</strong> has been saved.
             They&apos;ll see it on the big day! 🎉
           </p>
           <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-5 py-2 text-sm font-semibold text-purple-700">
@@ -197,13 +198,11 @@ export function WishForm({
         </div>
 
         <p className="text-center text-xs text-gray-400 mt-4">
-          Powered by{" "}
-          <a
-            href="/"
-            className="font-[var(--font-pacifico)] text-purple-500 hover:underline"
-          >
-            BirthdayDrop
-          </a>
+          Powered by
+          <br />
+          <span className="inline-block mt-2">
+            <Logo size="sm" />
+          </span>
         </p>
       </div>
     </div>

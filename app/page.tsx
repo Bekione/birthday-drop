@@ -297,13 +297,9 @@ export default function Home() {
       </section>
 
       {/* ── Footer ── */}
-      <footer className="px-6 py-8 bg-gray-50 text-center text-sm text-gray-400 border-t border-gray-100">
-        <p>
-          Made with ❤️ for teams everywhere ·{" "}
-          <span className="font-[var(--font-pacifico)] text-purple-500">
-            BirthdayDrop
-          </span>
-        </p>
+      <footer className="px-6 py-8 bg-gray-50 text-center text-sm text-gray-400 border-t border-gray-100 flex flex-col items-center gap-3">
+        <Logo size="sm" />
+        <p>Made with ❤️ for teams everywhere</p>
       </footer>
     </main>
   );

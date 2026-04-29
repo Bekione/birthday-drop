@@ -9,6 +9,7 @@ import {
 } from "@/app/actions";
 import { THEMES, ThemeId } from "@/lib/themes";
 import { Logo } from "@/components/logo";
+import { Eye, Edit2, X, Save, Trash2, Unlock } from "lucide-react";
 
 interface AdminPageClientProps {
   eventId: string;
@@ -167,9 +168,15 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
               id="admin-login-btn"
               type="submit"
               disabled={authLoading}
-              className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-3 font-bold text-white shadow-lg hover:scale-105 disabled:opacity-60 disabled:scale-100 transition-all"
+              className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-3 font-bold text-white shadow-lg hover:scale-105 disabled:opacity-60 disabled:scale-100 transition-all"
             >
-              {authLoading ? "Verifying..." : "🔓 Enter Dashboard"}
+              {authLoading ? (
+                "Verifying..."
+              ) : (
+                <>
+                  <Unlock size={18} /> Enter Dashboard
+                </>
+              )}
             </button>
           </form>
         </div>
@@ -193,9 +200,9 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
           <a
             href={`/surprise/${event.surpriseToken}`}
             target="_blank"
-            className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow hover:scale-105 transition-all"
+            className="flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-5 py-2.5 text-sm font-bold text-white shadow hover:scale-105 transition-all"
           >
-            👁️ Preview Surprise
+            <Eye size={16} /> Preview Surprise
           </a>
         </div>
 
@@ -213,9 +220,17 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
             </div>
             <button
               onClick={() => setEditMode(!editMode)}
-              className="rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
+              className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-4 py-2 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors"
             >
-              {editMode ? "Cancel" : "✏️ Edit"}
+              {editMode ? (
+                <>
+                  <X size={16} /> Cancel
+                </>
+              ) : (
+                <>
+                  <Edit2 size={16} /> Edit
+                </>
+              )}
             </button>
           </div>
 
@@ -281,9 +296,15 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-2.5 font-bold text-white text-sm hover:scale-105 disabled:opacity-60 disabled:scale-100 transition-all"
+                className="w-full flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 py-2.5 font-bold text-white text-sm hover:scale-105 disabled:opacity-60 disabled:scale-100 transition-all"
               >
-                {saving ? "Saving..." : "💾 Save Changes"}
+                {saving ? (
+                  "Saving..."
+                ) : (
+                  <>
+                    <Save size={16} /> Save Changes
+                  </>
+                )}
               </button>
             </div>
           )}
@@ -374,9 +395,15 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                   <button
                     onClick={() => handleDelete(wish.id)}
                     disabled={deleteLoading === wish.id}
-                    className="rounded-lg px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
+                    className="flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors disabled:opacity-40"
                   >
-                    {deleteLoading === wish.id ? "..." : "🗑️ Delete"}
+                    {deleteLoading === wish.id ? (
+                      "..."
+                    ) : (
+                      <>
+                        <Trash2 size={14} /> Delete
+                      </>
+                    )}
                   </button>
                 </div>
               ))}
