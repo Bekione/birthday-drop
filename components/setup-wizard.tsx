@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { THEMES, ThemeId } from "@/lib/themes";
+import { THEMES, ThemeId, DEFAULT_AUDIO_TRACKS } from "@/lib/themes";
 import { createEvent } from "@/app/actions";
-import { DEFAULT_AUDIO_TRACKS } from "@/lib/themes";
+import { Logo } from "@/components/logo";
 
 const STEPS = ["Who?", "Theme", "Music", "Security", "Done!"];
 
@@ -134,13 +134,8 @@ export function SetupWizard() {
       <div className="w-full max-w-2xl">
         {/* Header */}
         <div className="text-center mb-8">
-          <a
-            href="/"
-            className="text-3xl font-[var(--font-pacifico)] text-purple-700 hover:opacity-80 transition-opacity"
-          >
-            🎂 BirthdayDrop
-          </a>
-          <p className="mt-2 text-gray-500 text-sm">
+          <Logo size="lg" />
+          <p className="mt-4 text-gray-500 text-sm">
             Create your birthday surprise in minutes
           </p>
         </div>
@@ -230,20 +225,7 @@ export function SetupWizard() {
                     </label>
                   </div>
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                    Wish form deadline (optional)
-                  </label>
-                  <input
-                    type="datetime-local"
-                    value={wishDeadline}
-                    onChange={(e) => setWishDeadline(e.target.value)}
-                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all"
-                  />
-                  <p className="text-xs text-gray-400 mt-1">
-                    The wish form will auto-close after this date.
-                  </p>
-                </div>
+
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-1.5">
                     Teaser message on wish form (optional)
@@ -488,6 +470,21 @@ export function SetupWizard() {
                       Passwords don&apos;t match.
                     </p>
                   )}
+                </div>
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                    Wish form deadline (optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={wishDeadline}
+                    onChange={(e) => setWishDeadline(e.target.value)}
+                    className="w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all"
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    The wish form will auto-close after this date, or fallback
+                    to the birth date if empty.
+                  </p>
                 </div>
                 <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-700">
                   <p className="font-semibold mb-1">⚠️ Save this password!</p>

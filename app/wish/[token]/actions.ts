@@ -26,12 +26,17 @@ export async function submitWish(
 ) {
   const event = await db.event.findUnique({
     where: { wishToken: token },
-    select: { id: true, wishDeadline: true },
+    select: { id: true, wishDeadline: true, birthDate: true },
   });
 
   if (!event) return { success: false, error: "Event not found." };
 
-  if (event.wishDeadline && new Date() > event.wishDeadline) {
+  // First check specific deadline, fallback to birthDate
+  const isExpired = event.wishDeadline
+    ? new Date() > event.wishDeadline
+    : new Date() > new Date(event.birthDate);
+
+  if (isExpired) {
     return { success: false, error: "The wish form has closed." };
   }
 

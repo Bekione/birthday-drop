@@ -30,7 +30,7 @@ export default async function WishPage({
 
   const isExpired = event.wishDeadline
     ? new Date() > event.wishDeadline
-    : false;
+    : new Date() > new Date(event.birthDate);
 
   return (
     <WishForm
