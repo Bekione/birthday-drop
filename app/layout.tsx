@@ -1,5 +1,10 @@
 import type { Metadata } from "next";
-import { Pacifico, Montserrat, Playfair_Display } from "next/font/google";
+import {
+  Pacifico,
+  Montserrat,
+  Playfair_Display,
+  ADLaM_Display,
+} from "next/font/google";
 import "./globals.css";
 
 const pacifico = Pacifico({
@@ -17,6 +22,13 @@ const montserrat = Montserrat({
 
 const playfair = Playfair_Display({
   variable: "--font-playfair",
+  subsets: ["latin"],
+  display: "swap",
+});
+
+const adlam = ADLaM_Display({
+  variable: "--font-adlam",
+  weight: "400",
   subsets: ["latin"],
   display: "swap",
 });
@@ -45,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${pacifico.variable} ${montserrat.variable} ${playfair.variable}`}
+      className={`${pacifico.variable} ${montserrat.variable} ${playfair.variable} ${adlam.variable}`}
     >
       <body className="antialiased">{children}</body>
     </html>

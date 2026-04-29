@@ -57,7 +57,7 @@ export function WishForm({
             Wish submitted!
           </h1>
           <p className="text-gray-500 mb-6">
-            Your birthday wish for <strong>{personName}</strong> has been saved.
+            Your birthday wish for{" "}<strong>{personName}</strong>{" "}has been saved.
             They&apos;ll see it on the big day! 🎉
           </p>
           <div className="inline-flex items-center gap-2 rounded-full bg-purple-100 px-5 py-2 text-sm font-semibold text-purple-700">

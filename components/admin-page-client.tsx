@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   verifyAdminPassword,
   getAdminEvent,
@@ -8,6 +8,7 @@ import {
   updateEvent,
 } from "@/app/actions";
 import { THEMES, ThemeId } from "@/lib/themes";
+import { Logo } from "@/components/logo";
 
 interface AdminPageClientProps {
   eventId: string;
@@ -15,8 +16,11 @@ interface AdminPageClientProps {
 
 type EventData = Awaited<ReturnType<typeof getAdminEvent>>;
 
+const SESSION_KEY = (eventId: string) => `admin_authed_${eventId}`;
+
 export function AdminPageClient({ eventId }: AdminPageClientProps) {
   const [authed, setAuthed] = useState(false);
+  const [loading, setLoading] = useState(true); // checking sessionStorage
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
@@ -36,12 +40,39 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
 
+  // Restore auth from sessionStorage on mount
+  useEffect(() => {
+    const wasAuthed = sessionStorage.getItem(SESSION_KEY(eventId));
+    if (wasAuthed === "1") {
+      getAdminEvent(eventId).then((data) => {
+        if (data) {
+          setEvent(data);
+          setWishList(data.wishes);
+          setEditName(data.personName);
+          setEditDate(data.birthDate);
+          setEditTheme((data.theme as ThemeId) ?? "confetti");
+          setEditDeadline(
+            data.wishDeadline
+              ? new Date(data.wishDeadline).toISOString().slice(0, 16)
+              : "",
+          );
+          setEditTeaser(data.teaserMessage ?? "");
+          setAuthed(true);
+        }
+        setLoading(false);
+      });
+    } else {
+      setLoading(false);
+    }
+  }, [eventId]);
+
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError("");
     const ok = await verifyAdminPassword(eventId, password);
     if (ok) {
+      sessionStorage.setItem(SESSION_KEY(eventId), "1");
       const data = await getAdminEvent(eventId);
       setEvent(data);
       setWishList(data?.wishes ?? []);
@@ -100,17 +131,20 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     setTimeout(() => setCopied(null), 2000);
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
+        <div className="text-2xl animate-pulse">✨</div>
+      </div>
+    );
+  }
+
   if (!authed) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center p-6">
         <div className="w-full max-w-md rounded-3xl bg-white shadow-xl border border-gray-100 p-8">
           <div className="text-center mb-8">
-            <a
-              href="/"
-              className="text-3xl font-[var(--font-pacifico)] text-purple-700"
-            >
-              🎂 BirthdayDrop
-            </a>
+            <Logo size="lg" />
             <h1 className="text-xl font-bold text-gray-800 mt-4">
               Admin Dashboard
             </h1>
@@ -151,12 +185,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         {/* Header */}
         <div className="flex items-center justify-between">
           <div>
-            <a
-              href="/"
-              className="text-xl font-[var(--font-pacifico)] text-purple-700"
-            >
-              🎂 BirthdayDrop
-            </a>
+            <Logo size="sm" />
             <h1 className="text-2xl font-bold text-gray-800 mt-1">
               Admin Dashboard
             </h1>

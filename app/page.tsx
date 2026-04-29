@@ -1,13 +1,12 @@
 import Link from "next/link";
+import { Logo } from "@/components/logo";
 
 export default function Home() {
   return (
     <main className="min-h-screen bg-white font-[var(--font-montserrat)]">
       {/* ── Nav ── */}
       <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur border-b border-gray-100 px-6 py-4 flex items-center justify-between">
-        <span className="text-2xl font-[var(--font-pacifico)] text-purple-700">
-          🎂 BirthdayDrop
-        </span>
+        <Logo size="md" />
         <Link
           href="/setup"
           className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-6 py-2 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200"
@@ -57,18 +56,35 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Floating emojis */}
+        {/* Floating emojis — positions are intentionally spread to look random */}
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
-          {["🎈", "🎁", "🎊", "⭐", "🥳", "🎂", "💖", "🎶"].map((e, i) => (
+          {(
+            [
+              { e: "🎈", top: 12, left: 8, dur: 7, delay: 0 },
+              { e: "🎁", top: 70, left: 15, dur: 9, delay: 1.2 },
+              { e: "🎊", top: 30, left: 78, dur: 6, delay: 0.4 },
+              { e: "⭐", top: 80, left: 55, dur: 8, delay: 2 },
+              { e: "🥳", top: 18, left: 45, dur: 7, delay: 0.8 },
+              { e: "🎂", top: 55, left: 85, dur: 6, delay: 1.5 },
+              { e: "💖", top: 40, left: 25, dur: 9, delay: 0.2 },
+              { e: "🎶", top: 88, left: 72, dur: 7, delay: 3 },
+            ] as {
+              e: string;
+              top: number;
+              left: number;
+              dur: number;
+              delay: number;
+            }[]
+          ).map(({ e, top, left, dur, delay }, i) => (
             <span
               key={i}
               className="absolute text-2xl opacity-60 select-none animate-float-star"
               style={
                 {
-                  top: `${10 + ((i * 11) % 80)}%`,
-                  left: `${5 + ((i * 13) % 90)}%`,
-                  "--animation-duration": `${6 + (i % 4)}s`,
-                  animationDelay: `${i * 0.5}s`,
+                  top: `${top}%`,
+                  left: `${left}%`,
+                  "--animation-duration": `${dur}s`,
+                  animationDelay: `${delay}s`,
                 } as React.CSSProperties
               }
             >
