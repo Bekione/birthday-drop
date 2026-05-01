@@ -57,7 +57,7 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      className={`${pacifico.variable} ${montserrat.variable} ${playfair.variable} ${adlam.variable}`}
+      className={`scroll-smooth ${pacifico.variable} ${montserrat.variable} ${playfair.variable} ${adlam.variable}`}
     >
       <body className="antialiased">{children}</body>
     </html>
