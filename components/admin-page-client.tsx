@@ -9,7 +9,18 @@ import {
 } from "@/app/actions";
 import { THEMES, ThemeId } from "@/lib/themes";
 import { Logo } from "@/components/logo";
-import { Eye, Edit2, X, Save, Trash2, Unlock } from "lucide-react";
+import {
+  Eye,
+  Edit2,
+  X,
+  Save,
+  Trash2,
+  Unlock,
+  RefreshCw,
+  Link2,
+  MessageCircleHeart,
+  Cake,
+} from "lucide-react";
 
 interface AdminPageClientProps {
   eventId: string;
@@ -38,6 +49,8 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
   const [wishList, setWishList] = useState<NonNullable<EventData>["wishes"]>(
     [],
   );
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -49,6 +62,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         if (data) {
           setEvent(data);
           setWishList(data.wishes);
+          setLastRefreshed(new Date());
           setEditName(data.personName);
           setEditDate(data.birthDate);
           setEditTheme((data.theme as ThemeId) ?? "confetti");
@@ -66,6 +80,29 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
       setLoading(false);
     }
   }, [eventId]);
+
+  // Auto-poll every 15 s once authenticated
+  useEffect(() => {
+    if (!authed) return;
+    const poll = setInterval(async () => {
+      const data = await getAdminEvent(eventId);
+      if (data) {
+        setWishList(data.wishes);
+        setLastRefreshed(new Date());
+      }
+    }, 15_000);
+    return () => clearInterval(poll);
+  }, [authed, eventId]);
+
+  const handleManualRefresh = async () => {
+    setRefreshing(true);
+    const data = await getAdminEvent(eventId);
+    if (data) {
+      setWishList(data.wishes);
+      setLastRefreshed(new Date());
+    }
+    setRefreshing(false);
+  };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -134,8 +171,14 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 to-pink-50 flex items-center justify-center">
-        <div className="text-2xl animate-pulse">✨</div>
+      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-pink-50 to-blue-50 flex flex-col items-center justify-center gap-4">
+        <div className="relative">
+          <div className="absolute inset-0 rounded-full bg-purple-200 opacity-60 animate-ping" />
+          <Logo size="lg" />
+        </div>
+        <p className="font-adlam text-purple-600 text-lg animate-pulse">
+          Loading Dashboard...
+        </p>
       </div>
     );
   }
@@ -210,8 +253,9 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-6">
           <div className="flex items-start justify-between mb-4">
             <div>
-              <h2 className="text-lg font-bold text-gray-800">
-                🎂 {event.personName}&apos;s Birthday
+              <h2 className="text-lg font-bold text-gray-800 flex items-center gap-2">
+                <Cake size={20} className="text-pink-500" /> {event.personName}
+                &apos;s Birthday
               </h2>
               <p className="text-sm text-gray-400">
                 {event.birthDate} · Theme:{" "}
@@ -312,21 +356,26 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
 
         {/* Links Card */}
         <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-6 space-y-4">
-          <h2 className="font-bold text-gray-800">🔗 Your Links</h2>
+          <div className="flex items-center gap-2">
+            <Link2 size={18} className="text-purple-600" />
+            <h2 className="font-bold text-gray-800">Your Links</h2>
+          </div>
           {[
             {
-              label: "💌 Wish Form",
+              label: "Wish Form",
               desc: "Share with team",
               token: event.wishToken,
               key: "wish",
               path: "wish",
+              iconColor: "text-pink-500",
             },
             {
-              label: "🎉 Surprise Page",
+              label: "Surprise Page",
               desc: "Open on birthday",
               token: event.surpriseToken,
               key: "surprise",
               path: "surprise",
+              iconColor: "text-purple-500",
             },
           ].map((l) => (
             <div
@@ -353,13 +402,43 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
           ))}
         </div>
 
-        {/* Wishes */}
+        {/* Wishes header with live indicator + refresh */}
         <div className="rounded-3xl bg-white shadow-sm border border-gray-100 p-6">
           <div className="flex items-center justify-between mb-4">
-            <h2 className="font-bold text-gray-800">💌 Submitted Wishes</h2>
-            <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700">
-              {wishList.length} {wishList.length === 1 ? "wish" : "wishes"}
-            </span>
+            <div className="flex items-center gap-2">
+              <MessageCircleHeart size={20} className="text-purple-600" />
+              <h2 className="font-bold text-gray-800">Submitted Wishes</h2>
+              {/* Live pulse dot */}
+              <span className="flex h-2 w-2 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500" />
+              </span>
+            </div>
+            <div className="flex items-center gap-3">
+              {lastRefreshed && (
+                <span className="text-xs text-gray-400">
+                  Updated{" "}
+                  {lastRefreshed.toLocaleTimeString([], {
+                    hour: "2-digit",
+                    minute: "2-digit",
+                  })}
+                </span>
+              )}
+              <button
+                onClick={handleManualRefresh}
+                disabled={refreshing}
+                className="flex items-center gap-1.5 rounded-xl border border-gray-200 px-3 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors disabled:opacity-40"
+              >
+                <RefreshCw
+                  size={13}
+                  className={refreshing ? "animate-spin" : ""}
+                />
+                Refresh
+              </button>
+              <span className="rounded-full bg-purple-100 px-3 py-1 text-xs font-bold text-purple-700">
+                {wishList.length} {wishList.length === 1 ? "wish" : "wishes"}
+              </span>
+            </div>
           </div>
 
           {wishList.length === 0 ? (

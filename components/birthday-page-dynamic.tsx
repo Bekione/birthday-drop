@@ -6,6 +6,7 @@ import { Confetti } from "./confetti";
 import { CakeInteraction } from "./cake-interaction";
 import { PartyMode } from "./party-mode";
 import { addReaction } from "@/app/wish/[token]/actions";
+import { PartyPopper, Sparkles, Cake } from "lucide-react";
 
 interface Wish {
   id: string;
@@ -244,13 +245,13 @@ export function BirthdayPageDynamic({
           <button
             id="celebrate-btn"
             onClick={handleCelebrate}
-            className="relative overflow-hidden rounded-full px-10 py-5 text-2xl font-bold text-white shadow-2xl transition-all duration-300 hover:scale-105"
+            className="relative overflow-hidden rounded-full px-10 py-5 text-2xl font-bold text-white shadow-2xl transition-all duration-300 hover:scale-105 flex items-center justify-center gap-3"
             style={{
               background:
                 "linear-gradient(135deg, var(--theme-btn-from), var(--theme-btn-to))",
             }}
           >
-            🎉 Celebrate!
+            <PartyPopper size={28} /> Celebrate!
             <span className="absolute -right-2 -top-2 h-10 w-10 animate-ping-slow rounded-full bg-white opacity-20" />
           </button>
         </div>
@@ -317,7 +318,7 @@ export function BirthdayPageDynamic({
                   className="h-full w-full rounded-full flex items-center justify-center text-7xl"
                   style={{ background: "var(--theme-card-front)" }}
                 >
-                  🎂
+                  <Cake size={80} style={{ color: "var(--theme-card-text)" }} />
                 </div>
               )}
             </div>
@@ -389,12 +390,12 @@ export function BirthdayPageDynamic({
               <button
                 id="party-mode-btn"
                 onClick={() => setIsPartyMode(true)}
-                className="relative overflow-hidden rounded-full px-8 py-4 text-xl font-bold text-white shadow-lg transition-all duration-300 hover:scale-105"
+                className="relative overflow-hidden rounded-full px-8 py-4 text-xl font-bold text-white shadow-lg transition-all duration-300 hover:scale-105 flex items-center gap-2"
                 style={{
                   background: `linear-gradient(135deg, var(--theme-party-btn-from), var(--theme-party-btn-to))`,
                 }}
               >
-                🎊 Party Mode!
+                <Sparkles size={20} /> Party Mode!
                 <span className="absolute -right-2 -top-2 h-8 w-8 animate-ping-slow rounded-full bg-white opacity-20" />
               </button>
             </section>
