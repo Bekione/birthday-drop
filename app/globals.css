@@ -29,6 +29,7 @@
   --font-pacifico: "Pacifico", cursive;
   --font-montserrat: "Montserrat", sans-serif;
   --font-playfair: "Playfair Display", serif;
+  --font-adlam: "ADLaM Display", cursive;
 
   /* Custom animation durations */
   --animate-fade-in-out: fadeInOut 4s infinite;
@@ -421,6 +422,7 @@
 /* ── Scrollbar ── */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 ::-webkit-scrollbar-track {
   background: transparent;

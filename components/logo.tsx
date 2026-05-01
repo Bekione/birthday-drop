@@ -17,7 +17,7 @@ export function Logo({ size = "md", href = "/" }: LogoProps) {
   const inner = (
     <span className="inline-flex items-center gap-2">
       <Image
-        src="/images/logo.png"
+        src="/logo.png"
         alt="BirthdayDrop logo"
         width={img}
         height={img}
@@ -25,8 +25,7 @@ export function Logo({ size = "md", href = "/" }: LogoProps) {
         priority
       />
       <span
-        className={`${text} font-bold leading-none text-[#9e73da]`}
-        style={{ fontFamily: "var(--font-adlam)" }}
+        className={`${text} font-adlam font-bold leading-none text-[#9e73da]`}
       >
         BirthdayDrop
       </span>
