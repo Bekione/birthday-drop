@@ -90,15 +90,31 @@ export const DEFAULT_AUDIO_TRACKS = [
   {
     id: "track-1",
     title: "Happy Birthday (Bossa Nova)",
-    url: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/happy-birthday-to-you-bossa-nova-style-arrangement-21399-SOn1WYgFsLMiUWvNzhrWRn3ligyGZQ.mp3",
+    url: "/audios/happy-birthday-to-you-bossa-nova-style-arrangement-21399.mp3",
     isDefault: true,
     order: 0,
+    gradient: "from-pink-400 to-purple-500",
   },
   {
     id: "track-2",
-    title: "Upbeat Pop Birthday",
-    url: "https://hebbkx1anhila5yf.public.blob.vercel-storage.com/applause-cheer-236786-cRd3Z8EmJ1B0qHrcUSivSPQHCLwbFU.mp3",
+    title: "Happy 15th Birthday",
+    url: "/audios/freesound_community-happy-15th-birthday-freesound-65381.mp3",
     isDefault: false,
     order: 1,
+    gradient: "from-blue-400 to-indigo-500",
+  },
+  {
+    id: "track-3",
+    title: "Twisterium Birthday",
+    url: "/audios/twisterium-happy-birthday-482411.mp3",
+    isDefault: false,
+    order: 2,
+    gradient: "from-orange-400 to-pink-500",
   },
 ];
+
+/** Sound effects used by the birthday page — not user-selectable */
+export const SOUND_EFFECTS = {
+  applause: "/audios/applause-cheer-236786.mp3",
+  candleBlow: "/audios/blowing-out-candlewav-14441_g6nn5QhH.mp3",
+};

@@ -7,6 +7,7 @@ import { CakeInteraction } from "./cake-interaction";
 import { PartyMode } from "./party-mode";
 import { addReaction } from "@/app/wish/[token]/actions";
 import { PartyPopper, Sparkles, Cake } from "lucide-react";
+import { SOUND_EFFECTS } from "@/lib/themes";
 
 interface Wish {
   id: string;
@@ -195,13 +196,13 @@ export function BirthdayPageDynamic({
       )}
       <audio
         ref={applauseRef}
-        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/applause-cheer-236786-cRd3Z8EmJ1B0qHrcUSivSPQHCLwbFU.mp3"
+        src={SOUND_EFFECTS.applause}
         preload="auto"
         playsInline
       />
       <audio
         ref={blowRef}
-        src="https://hebbkx1anhila5yf.public.blob.vercel-storage.com/blowing-out-candlewav-14441_g6nn5QhH-vzGojipQh8sF7g1jY6DEuJXS3m7s7x.mp3"
+        src={SOUND_EFFECTS.candleBlow}
         preload="auto"
         playsInline
       />
@@ -230,6 +231,11 @@ export function BirthdayPageDynamic({
               ? "Prepare for an unforgettable moment!"
               : "Just a moment, the magic is brewing..."}
           </p>
+
+          {/* Preload avatar photo silently so it's ready when the page reveals */}
+          {personPhotoUrl && (
+            <img src={personPhotoUrl} alt="preload" className="hidden" />
+          )}
         </div>
       )}
 
