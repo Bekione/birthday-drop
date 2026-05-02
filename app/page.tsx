@@ -279,14 +279,14 @@ export default function Home() {
           </a>
           <Link
             href="/setup"
-            className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-5 py-2 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 whitespace-nowrap"
+            className="rounded-full bg-purple-600 hover:bg-purple-700 px-5 py-2 text-sm font-semibold text-white shadow-md hover:shadow-lg hover:scale-105 transition-all duration-200 whitespace-nowrap"
           >
             Create a Surprise
           </Link>
         </div>
         <Link
           href="/setup"
-          className="md:hidden rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-4 py-2 text-xs font-semibold text-white shadow-sm"
+          className="md:hidden rounded-full bg-purple-600 hover:bg-purple-700 px-4 py-2 text-xs font-semibold text-white shadow-sm"
         >
           Create Surprise
         </Link>
@@ -417,7 +417,7 @@ export default function Home() {
             <Link
               href="/setup"
               id="hero-cta"
-              className="group relative overflow-hidden rounded-full flex items-center gap-2 bg-gradient-to-r from-pink-500 to-purple-600 px-8 py-4 text-lg sm:text-xl font-bold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl w-full sm:w-auto"
+              className="group relative overflow-hidden rounded-full flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-8 py-4 text-lg sm:text-xl font-bold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl w-full sm:w-auto"
             >
               <Gift size={20} className="relative z-10 text-white/90" />
               <span className="relative z-10">Create a Surprise</span>

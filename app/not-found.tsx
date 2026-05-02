@@ -47,7 +47,7 @@ export default function NotFound() {
 
         <Link
           href="/"
-          className="inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-8 py-3 font-bold text-white shadow-lg hover:scale-105 transition-all duration-200"
+          className="inline-flex items-center gap-2 rounded-full bg-purple-600 px-8 py-3 font-bold text-white shadow-lg hover:bg-purple-700 hover:scale-105 transition-all duration-200"
         >
           ← Back Home
         </Link>

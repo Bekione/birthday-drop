@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useCallback } from "react";
+import { useEffect, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "framer-motion";
 import type { ZodIssue } from "zod";
 import { THEMES, ThemeId, DEFAULT_AUDIO_TRACKS } from "@/lib/themes";
 import { createEvent } from "@/app/actions";
 import { Logo } from "@/components/logo";
+import Image from "next/image";
 import {
   Star,
   Music2,
@@ -14,8 +15,12 @@ import {
   PartyPopper,
   Camera,
   Upload,
-  AlertTriangle,
+  LayoutDashboard,
   Mail,
+  Play,
+  Pause,
+  Check,
+  ShieldCheck,
 } from "lucide-react";
 import { useWizardStore } from "@/lib/wizard-store";
 import { step0Schema, step3Schema } from "@/lib/wizard-schema";
@@ -72,6 +77,10 @@ export function SetupWizard() {
     surpriseToken: string;
     eventId: string;
   } | null>(null);
+  const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(
+    null,
+  );
+  const previewAudioRef = useRef<HTMLAudioElement | null>(null);
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
 
@@ -419,39 +428,51 @@ export function SetupWizard() {
                   </div>
                   {/* Horizontal scroll snap — ready for more themes */}
                   <div className="flex gap-4 overflow-x-auto py-3 snap-x snap-mandatory scrollbar-thin scrollbar-thumb-purple-200">
-                    {Object.values(THEMES).map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        id={`theme-${t.id}`}
-                        onClick={() => setField("theme", t.id as ThemeId)}
-                        className={`snap-center shrink-0 w-64 rounded-2xl border-2 p-5 text-left transition-all duration-200 hover:scale-[1.02] ${
-                          theme === t.id
-                            ? "border-purple-500 shadow-lg shadow-purple-100"
-                            : "border-gray-100"
-                        }`}
-                      >
-                        <div
-                          className={`h-20 rounded-xl mb-4 flex items-center justify-center text-4xl bg-gradient-to-br ${
-                            t.id === "confetti"
-                              ? "from-blue-100 to-teal-200"
-                              : "from-indigo-950 to-purple-950"
+                    {Object.values(THEMES).map((t) => {
+                      const imgSrc =
+                        t.id === "confetti"
+                          ? "/images/theme-confetti-carnival.png"
+                          : "/images/theme-midnight-star.png";
+                      return (
+                        <button
+                          key={t.id}
+                          type="button"
+                          id={`theme-${t.id}`}
+                          onClick={() => setField("theme", t.id as ThemeId)}
+                          className={`snap-center shrink-0 w-64 rounded-2xl border-2 p-0 text-left transition-all duration-200 hover:scale-[1.02] overflow-hidden ${
+                            theme === t.id
+                              ? "border-purple-500 shadow-lg shadow-purple-100"
+                              : "border-gray-100"
                           }`}
                         >
-                          {t.emoji}
-                        </div>
-                        <div className="flex items-center justify-between mb-1">
-                          <p className="font-bold text-gray-800">{t.name}</p>
-                          {theme === t.id && (
-                            <span className="text-purple-600 text-lg">✓</span>
-                          )}
-                        </div>
-                        <p className="text-xs text-gray-500">{t.description}</p>
-                      </button>
-                    ))}
+                          {/* Preview image */}
+                          <div className="relative h-36 w-full overflow-hidden">
+                            <Image
+                              src={imgSrc}
+                              alt={`${t.name} preview`}
+                              fill
+                              className="object-cover transition-transform duration-500 group-hover:scale-105"
+                            />
+                            {theme === t.id && (
+                              <div className="absolute top-2 right-2 flex h-7 w-7 items-center justify-center rounded-full bg-purple-600 shadow-lg">
+                                <Check size={14} className="text-white" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="p-4">
+                            <p className="font-bold text-gray-800 mb-0.5">
+                              {t.name}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {t.description}
+                            </p>
+                          </div>
+                        </button>
+                      );
+                    })}
                     {/* Future theme placeholder */}
                     <div className="snap-center shrink-0 w-64 rounded-2xl border-2 border-dashed border-gray-200 p-5 flex flex-col items-center justify-center text-gray-300 gap-2">
-                      <span className="text-3xl">✨</span>
+                      <Star size={28} />
                       <p className="text-xs font-semibold">More coming soon</p>
                     </div>
                   </div>
@@ -475,41 +496,81 @@ export function SetupWizard() {
                     </div>
                   </div>
 
+                  <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                    Curated tracks
+                  </p>
                   <div className="space-y-3 mb-6">
-                    {DEFAULT_AUDIO_TRACKS.map((t) => (
-                      <button
-                        key={t.id}
-                        type="button"
-                        onClick={() => {
-                          setField("selectedTrackId", t.id);
-                          setField("customAudioFile", null);
-                        }}
-                        className={`w-full flex items-center gap-4 rounded-xl border-2 px-4 py-3 text-left transition-all ${
-                          selectedTrackId === t.id &&
-                          !useWizardStore.getState().customAudioFile
-                            ? "border-purple-500 bg-purple-50"
-                            : "border-gray-100 hover:border-purple-200"
-                        }`}
-                      >
-                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
-                          <Music2 size={18} className="text-purple-600" />
-                        </div>
-                        <div>
-                          <p className="font-semibold text-gray-800 text-sm">
+                    {DEFAULT_AUDIO_TRACKS.map((t) => {
+                      const isSelected =
+                        selectedTrackId === t.id &&
+                        !useWizardStore.getState().customAudioFile;
+                      const isPreviewing = previewingTrackId === t.id;
+
+                      const handlePreview = (e: React.MouseEvent) => {
+                        e.stopPropagation();
+                        if (isPreviewing) {
+                          previewAudioRef.current?.pause();
+                          setPreviewingTrackId(null);
+                        } else {
+                          if (previewAudioRef.current) {
+                            previewAudioRef.current.pause();
+                          }
+                          previewAudioRef.current = new Audio(t.url);
+                          previewAudioRef.current.volume = 0.6;
+                          previewAudioRef.current.play();
+                          previewAudioRef.current.onended = () =>
+                            setPreviewingTrackId(null);
+                          setPreviewingTrackId(t.id);
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={t.id}
+                          onClick={() => {
+                            setField("selectedTrackId", t.id);
+                            setField("customAudioFile", null);
+                          }}
+                          className={`w-full flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${
+                            isSelected
+                              ? "border-purple-500 bg-purple-50"
+                              : "border-gray-100 hover:border-purple-200"
+                          }`}
+                        >
+                          {/* Album art placeholder */}
+                          <div
+                            className={`h-10 w-10 shrink-0 rounded-lg bg-gradient-to-br ${t.gradient ?? "from-purple-400 to-pink-500"} flex items-center justify-center shadow-sm`}
+                          >
+                            <Music2 size={16} className="text-white" />
+                          </div>
+                          <p className="flex-1 font-semibold text-gray-800 text-sm">
                             {t.title}
                           </p>
-                          {t.isDefault && (
-                            <p className="text-xs text-purple-500">
-                              Default pick
-                            </p>
+                          {/* Selected check */}
+                          {isSelected && (
+                            <div className="flex h-6 w-6 items-center justify-center rounded-full bg-purple-600">
+                              <Check size={12} className="text-white" />
+                            </div>
                           )}
+                          {/* Play/pause preview */}
+                          <button
+                            type="button"
+                            onClick={handlePreview}
+                            className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+                              isPreviewing
+                                ? "bg-purple-600 text-white shadow-md"
+                                : "bg-gray-100 text-gray-500 hover:bg-purple-100 hover:text-purple-600"
+                            }`}
+                          >
+                            {isPreviewing ? (
+                              <Pause size={14} />
+                            ) : (
+                              <Play size={14} />
+                            )}
+                          </button>
                         </div>
-                        {selectedTrackId === t.id &&
-                          !useWizardStore.getState().customAudioFile && (
-                            <span className="ml-auto text-purple-600">✓</span>
-                          )}
-                      </button>
-                    ))}
+                      );
+                    })}
                     {/* Custom upload */}
                     <label
                       className={`w-full flex items-center gap-4 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${
@@ -616,10 +677,9 @@ export function SetupWizard() {
                 </div>
               )}
 
-              {/* ── Step 3: Security ─────────────────────── */}
               {step === 3 && (
                 <div className="p-8">
-                  <div className="flex items-center gap-3 mb-6">
+                  <div className="flex items-center gap-3 mb-2">
                     <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-500 to-indigo-600 shadow">
                       <Lock size={24} className="text-white" />
                     </div>
@@ -628,14 +688,16 @@ export function SetupWizard() {
                         Secure your event
                       </h2>
                       <p className="text-gray-400 text-sm">
-                        Set a password and a wish deadline.
+                        Lock in the details and get the party started.
                       </p>
                     </div>
                   </div>
-                  <div className="space-y-5">
+
+                  <div className="space-y-5 mt-6">
+                    {/* Admin Password */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Admin Password *
+                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                        Admin Password
                       </label>
                       <input
                         id="adminPassword"
@@ -659,9 +721,11 @@ export function SetupWizard() {
                         </p>
                       )}
                     </div>
+
+                    {/* Confirm Password */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Confirm Password *
+                      <label className="block text-xs font-bold uppercase tracking-wider text-gray-500 mb-1.5">
+                        Confirm Password
                       </label>
                       <input
                         id="confirmPassword"
@@ -685,10 +749,17 @@ export function SetupWizard() {
                         </p>
                       )}
                     </div>
+
+                    {/* Wish deadline */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Wish form deadline (optional)
-                      </label>
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <label className="text-xs font-bold uppercase tracking-wider text-gray-500">
+                          Wish Form Deadline
+                        </label>
+                        <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700 uppercase tracking-wide">
+                          Recommended
+                        </span>
+                      </div>
                       <input
                         type="datetime-local"
                         value={wishDeadline}
@@ -698,21 +769,25 @@ export function SetupWizard() {
                         className="w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all"
                       />
                       <p className="text-xs text-gray-400 mt-1">
-                        Form closes automatically after this date. Defaults to
-                        birthday date if left empty.
+                        Guests won&apos;t be able to submit wishes after this
+                        time.
                       </p>
                     </div>
-                    <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-sm text-amber-700">
-                      <p className="font-semibold mb-1 flex items-end gap-2">
-                        <AlertTriangle />
-                        Save this password!
+
+                    {/* Security warning */}
+                    <div className="rounded-xl bg-purple-50 border border-purple-200 p-4">
+                      <p className="font-bold text-purple-800 mb-1 flex items-center gap-2">
+                        <ShieldCheck size={18} className="text-purple-600" />
+                        Keep this safe, Party Planner!
                       </p>
-                      <p>
-                        You&apos;ll need it to access your admin dashboard.
-                        There&apos;s no recovery option — keep it safe.
+                      <p className="text-sm text-purple-700 leading-relaxed">
+                        This password is your only way to view the secret wishes
+                        and manage the event. We can&apos;t store plain-text
+                        passwords, so we can&apos;t recover it for you!
                       </p>
                     </div>
                   </div>
+
                   {error && (
                     <p className="mt-4 text-sm text-red-500">{error}</p>
                   )}
@@ -785,8 +860,9 @@ export function SetupWizard() {
                     </div>
                     {/* Admin link */}
                     <div className="rounded-2xl bg-gray-50 border border-gray-200 p-4">
-                      <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1">
-                        ⚙️ Admin Dashboard (bookmark this)
+                      <p className="text-xs font-bold uppercase tracking-wider text-gray-500 mb-1 flex items-center gap-1.5">
+                        <LayoutDashboard size={14} />
+                        Admin Dashboard (bookmark this)
                       </p>
                       <div className="flex items-center gap-2 bg-white rounded-lg border border-gray-200 px-3 py-2">
                         <code className="flex-1 text-xs text-gray-700 break-all">
@@ -812,7 +888,7 @@ export function SetupWizard() {
                       reset();
                       router.push(`/admin/${result.eventId}`);
                     }}
-                    className="w-full rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-8 py-3 font-bold text-white shadow-lg hover:scale-105 transition-all"
+                    className="w-full rounded-full bg-gradient-to-r from-purple-600 to-purple-700 px-8 py-3 font-bold text-white shadow-lg hover:scale-105 transition-all"
                   >
                     Go to Admin Dashboard →
                   </button>
@@ -840,7 +916,7 @@ export function SetupWizard() {
                   type="button"
                   id="next-step"
                   onClick={() => goTo(step + 1)}
-                  className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:scale-105 transition-all"
+                  className="rounded-full bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:scale-105 transition-all"
                 >
                   Next →
                 </button>
@@ -850,7 +926,7 @@ export function SetupWizard() {
                   id="create-surprise"
                   onClick={handleSubmit}
                   disabled={loading}
-                  className="rounded-full bg-gradient-to-r from-pink-500 to-purple-600 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:scale-105 disabled:opacity-60 disabled:scale-100 transition-all"
+                  className="rounded-full bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:scale-105 disabled:opacity-60 disabled:scale-100 transition-all"
                 >
                   {loading ? (
                     "Creating…"
