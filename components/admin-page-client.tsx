@@ -9,6 +9,7 @@ import {
 } from "@/app/actions";
 import { THEMES, ThemeId, DEFAULT_AUDIO_TRACKS } from "@/lib/themes";
 import { Logo } from "@/components/logo";
+import Image from "next/image";
 import {
   Eye,
   Edit2,
@@ -476,10 +477,13 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                       }`}
                     >
                       {imgSrc ? (
-                        <img
+                        <Image
                           src={imgSrc}
                           alt={t.name}
+                          width={56}
+                          height={36}
                           className="h-9 w-14 rounded-lg object-cover shrink-0"
+                          unoptimized
                         />
                       ) : (
                         <span className="text-xl">{t.emoji}</span>

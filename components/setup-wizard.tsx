@@ -350,10 +350,13 @@ export function SetupWizard() {
                       </label>
                       <div className="flex items-center gap-4">
                         {photoPreview && (
-                          <img
+                          <Image
                             src={photoPreview}
                             alt="Preview"
+                            width={64}
+                            height={64}
                             className="h-16 w-16 rounded-full object-cover border-2 border-purple-300"
+                            unoptimized
                           />
                         )}
                         <label className="cursor-pointer rounded-xl border-2 border-dashed border-purple-200 px-6 py-4 text-center text-sm text-purple-500 hover:border-purple-400 transition-colors flex-1 flex items-center justify-center gap-2">

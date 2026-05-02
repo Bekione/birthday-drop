@@ -234,7 +234,15 @@ export function BirthdayPageDynamic({
 
           {/* Preload avatar photo silently so it's ready when the page reveals */}
           {personPhotoUrl && (
-            <img src={personPhotoUrl} alt="preload" className="hidden" />
+            <Image
+              src={personPhotoUrl}
+              alt="preload"
+              width={1}
+              height={1}
+              className="hidden"
+              priority
+              unoptimized
+            />
           )}
         </div>
       )}
