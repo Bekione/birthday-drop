@@ -1,4 +1,6 @@
-# 🎈 BirthdayDrop
+<img width="50" height="50" alt="logo" src="https://github.com/user-attachments/assets/ed5ce171-30f0-4654-9178-2faec9ee70cc" />
+
+# BirthdayDrop
 
 A modern, interactive web application designed to create beautiful, collaborative digital birthday surprises.
 
