@@ -88,6 +88,8 @@ const howItWorks = [
     step: "1",
     icon: Settings2,
     gradient: "from-pink-400 to-purple-500",
+    shadowClass: "shadow-pink-400",
+    borderClass: "border-pink-400",
     title: "Set it up",
     desc: "Enter the birthday person's name, pick a theme & songs, set a wish deadline, and create your surprise in under 2 minutes.",
   },
@@ -95,6 +97,8 @@ const howItWorks = [
     step: "2",
     icon: Mail,
     gradient: "from-purple-400 to-indigo-500",
+    shadowClass: "shadow-purple-400",
+    borderClass: "border-purple-400",
     title: "Collect wishes",
     desc: "Share the secret wish-form link with colleagues or friends. They submit their name and birthday message — no account needed!",
   },
@@ -102,6 +106,8 @@ const howItWorks = [
     step: "3",
     icon: Gift,
     gradient: "from-pink-400 to-rose-500",
+    shadowClass: "shadow-pink-400",
+    borderClass: "border-pink-400",
     title: "Reveal the surprise",
     desc: "On the birthday, open the surprise link. Watch the animated reveal with all their real wishes, confetti & music.",
   },
@@ -447,7 +453,7 @@ export default function Home() {
             className="w-full h-12 sm:h-16"
           >
             <path
-              d="M0,32 C240,64 480,0 720,32 C960,64 1200,0 1440,32 L1440,64 L0,64 Z"
+              d="M 0,48 C 320,-16 640,-16 960,32 C 1120,56 1280,56 1440,16 L 1440,64 L 0,64 Z"
               fill="white"
             />
           </svg>
@@ -474,12 +480,20 @@ export default function Home() {
                   {/* Icon circle with step badge */}
                   <div className="relative mx-auto mb-6 w-20 h-20">
                     <div
-                      className={`w-full h-full rounded-full bg-gradient-to-br ${s.gradient} flex items-center justify-center shadow-lg transition-transform duration-300 group-hover:scale-110`}
+                      className={`w-full h-full rounded-full bg-gradient-to-br ${s.gradient} flex items-center justify-center shadow-lg ${s.shadowClass} transition-transform duration-300 group-hover:scale-110`}
                     >
                       <Icon size={34} className="text-white" />
                     </div>
-                    <div className="absolute -top-1 -left-1 flex h-7 w-7 items-center justify-center rounded-full bg-white border-2 border-purple-400 text-xs font-extrabold text-purple-600 shadow-sm">
-                      {s.step}
+                    <div className="absolute -top-1 -left-1">
+                      {/* Fake cutout layer (eraser) */}
+                      <div className="absolute inset-0 rounded-full bg-white scale-[1.2]"></div>
+
+                      {/* Actual badge */}
+                      <div
+                        className={`relative flex h-7 w-7 items-center justify-center rounded-full bg-white border-2 ${s.borderClass} text-xs font-extrabold text-purple-600`}
+                      >
+                        {s.step}
+                      </div>
                     </div>
                   </div>
                   <h3 className="mb-3 text-xl font-bold text-gray-800">
