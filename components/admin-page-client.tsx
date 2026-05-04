@@ -171,10 +171,12 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     const poll = setInterval(async () => {
       const data = await getAdminEvent(eventId);
       if (data) {
-        if (wishList.length <= 15) {
-          setWishList(data.wishes);
-          setHasMore(data.wishes.length === 15);
-        }
+        setWishList((prev) => {
+          // Merge newly fetched wishes safely at the top without touching hasMore
+          const newIds = new Set(data.wishes.map((w: any) => w.id));
+          const existingSafe = prev.filter((w) => !newIds.has(w.id));
+          return [...data.wishes, ...existingSafe];
+        });
         setLastRefreshed(new Date());
       }
     }, 15_000);

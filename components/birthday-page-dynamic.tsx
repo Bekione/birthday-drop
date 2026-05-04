@@ -128,6 +128,7 @@ export function BirthdayPageDynamic({
   const [showConfetti, setShowConfetti] = useState(false);
   const [showMain, setShowMain] = useState(false);
   const [isPartyMode, setIsPartyMode] = useState(false);
+  const [showAllWishes, setShowAllWishes] = useState(false);
   const [wishReactions, setWishReactions] = useState<
     Record<string, Record<string, number>>
   >(Object.fromEntries(wishes.map((w) => [w.id, w.reactions])));
@@ -181,6 +182,8 @@ export function BirthdayPageDynamic({
     }));
     await addReaction(wishId, emoji);
   };
+
+  const visibleWishes = showAllWishes ? wishes : wishes.slice(0, 15);
 
   return (
     <>
@@ -351,18 +354,31 @@ export function BirthdayPageDynamic({
                   : "Be the first to wish! 🎈"}
               </h2>
               {wishes.length > 0 ? (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-                  {wishes.map((wish) => (
-                    <WishCard
-                      key={wish.id}
-                      wish={{
-                        ...wish,
-                        reactions: wishReactions[wish.id] ?? wish.reactions,
-                      }}
-                      onReact={handleReact}
-                    />
-                  ))}
-                </div>
+                <>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    {visibleWishes.map((wish) => (
+                      <WishCard
+                        key={wish.id}
+                        wish={{
+                          ...wish,
+                          reactions: wishReactions[wish.id] ?? wish.reactions,
+                        }}
+                        onReact={handleReact}
+                      />
+                    ))}
+                  </div>
+                  {wishes.length > 15 && !showAllWishes && (
+                    <div className="mt-8 flex justify-center">
+                      <button
+                        onClick={() => setShowAllWishes(true)}
+                        className="rounded-full bg-white/20 px-8 py-3 text-sm font-bold shadow-lg backdrop-blur-md transition-all hover:bg-white/30 hover:scale-105 border border-white/30"
+                        style={{ color: "var(--theme-heading)" }}
+                      >
+                        View {wishes.length - 15} more wishes
+                      </button>
+                    </div>
+                  )}
+                </>
               ) : (
                 <div className="rounded-2xl border-2 border-dashed border-white/30 py-12 text-center opacity-60">
                   <p className="text-xl">No wishes yet 🥺</p>

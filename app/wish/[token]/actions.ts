@@ -2,7 +2,7 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
 
 export async function getWishFormData(token: string) {
   return db.event.findUnique({
@@ -40,27 +40,17 @@ export async function submitWish(
     return { success: false, error: "The wish form has closed." };
   }
 
-  // Basic rate limit: max 3 wishes per IP per event
-  const headersList = await headers();
-  const ip =
-    headersList.get("x-forwarded-for")?.split(",")[0]?.trim() ??
-    headersList.get("x-real-ip") ??
-    "unknown";
+  // Rate limitter using high-security cookies.
+  // People changing `wisherName` no longer bypasses this limit.
+  const cookieStore = await cookies();
+  const limitKey = `bd_wishes_${event.id}`;
+  const currentCount = parseInt(cookieStore.get(limitKey)?.value || "0", 10);
 
-  // We store ip in a virtual check via recent submissions from the same wisher name+event within 10 min
-  // Simple approach: check count of wishes in last hour from same event with same name
-  const recentCount = await db.wish.count({
-    where: {
-      eventId: event.id,
-      wisherName: { equals: wisherName, mode: "insensitive" },
-      submittedAt: { gte: new Date(Date.now() - 60 * 60 * 1000) },
-    },
-  });
-
-  if (recentCount >= 3) {
+  if (currentCount >= 3) {
     return {
       success: false,
-      error: "You've already submitted a wish. Thank you! 🎉",
+      error:
+        "You've reached the maximum number of wishes allowed from this device.",
     };
   }
 
@@ -70,6 +60,11 @@ export async function submitWish(
       wisherName: wisherName.trim() || "Anonymous",
       message: message.trim(),
     },
+  });
+
+  cookieStore.set(limitKey, (currentCount + 1).toString(), {
+    expires:
+      event.wishDeadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
   });
 
   revalidatePath(`/wish/${token}`);
