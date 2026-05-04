@@ -6,6 +6,7 @@ import {
   getAdminEvent,
   deleteWish,
   updateEvent,
+  getAdminWishesPage,
 } from "@/app/actions";
 import { THEMES, ThemeId, DEFAULT_AUDIO_TRACKS } from "@/lib/themes";
 import { Logo } from "@/components/logo";
@@ -87,8 +88,45 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
   const [wishList, setWishList] = useState<NonNullable<EventData>["wishes"]>(
     [],
   );
+  const [hasMore, setHasMore] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const observerRef = useRef<IntersectionObserver | null>(null);
+  const lastWishElementRef = useRef<HTMLDivElement | null>(null);
 
   const base = typeof window !== "undefined" ? window.location.origin : "";
+
+  // Infinite Scroll Observer setup
+  useEffect(() => {
+    if (loadingMore || !hasMore) return;
+    if (observerRef.current) observerRef.current.disconnect();
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      if (entries[0].isIntersecting && !loadingMore && hasMore) {
+        setLoadingMore(true);
+        const cursor = wishList[wishList.length - 1]?.id;
+        if (!cursor) {
+          setLoadingMore(false);
+          return;
+        }
+        getAdminWishesPage(eventId, cursor)
+          .then((newWishes) => {
+            if (newWishes.length < 15) setHasMore(false);
+            setWishList((prev) => {
+              const existingIds = new Set(prev.map((w) => w.id));
+              const filtered = newWishes.filter((w) => !existingIds.has(w.id));
+              return [...prev, ...filtered];
+            });
+          })
+          .catch(() => {})
+          .finally(() => setLoadingMore(false));
+      }
+    });
+
+    if (lastWishElementRef.current) {
+      observerRef.current.observe(lastWishElementRef.current);
+    }
+    return () => observerRef.current?.disconnect();
+  }, [loadingMore, hasMore, wishList, eventId]);
 
   // Restore auth from sessionStorage on mount
   useEffect(() => {
@@ -98,6 +136,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         if (data) {
           setEvent(data);
           setWishList(data.wishes);
+          setHasMore(data.wishes.length === 15);
           setLastRefreshed(new Date());
           setEditName(data.personName);
           setEditDate(data.birthDate);
@@ -132,7 +171,10 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     const poll = setInterval(async () => {
       const data = await getAdminEvent(eventId);
       if (data) {
-        setWishList(data.wishes);
+        if (wishList.length <= 15) {
+          setWishList(data.wishes);
+          setHasMore(data.wishes.length === 15);
+        }
         setLastRefreshed(new Date());
       }
     }, 15_000);
@@ -144,6 +186,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     const data = await getAdminEvent(eventId);
     if (data) {
       setWishList(data.wishes);
+      setHasMore(data.wishes.length === 15);
       setLastRefreshed(new Date());
     }
     setRefreshing(false);
@@ -159,6 +202,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
       const data = await getAdminEvent(eventId);
       setEvent(data);
       setWishList(data?.wishes ?? []);
+      setHasMore((data?.wishes?.length ?? 0) === 15);
       setEditName(data?.personName ?? "");
       setEditDate(data?.birthDate ?? "");
       setEditTheme((data?.theme as ThemeId) ?? "confetti");
@@ -409,7 +453,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
           <div className="relative z-10 flex gap-4 w-full justify-center border-t border-purple-100/60 pt-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm px-8 py-4 flex flex-col items-center justify-center border border-purple-100/50">
               <span className="text-3xl font-black text-purple-600 mb-0.5">
-                {wishList.length}
+                {event?._count?.wishes ?? wishList.length}
               </span>
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 Wishes
@@ -784,8 +828,8 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
             </div>
 
             {/* Wishes List Feed */}
-            <div className="rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-6">
-              <div className="flex flex-wrap items-center justify-between gap-4 mb-5">
+            <div className="rounded-3xl bg-white shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-gray-100 p-6 flex flex-col max-h-[600px] overflow-hidden">
+              <div className="flex flex-wrap items-center justify-between gap-4 mb-5 shrink-0">
                 <div className="flex items-center gap-2">
                   <Mailbox size={18} className="text-purple-500" />
                   <h2 className="text-lg font-bold text-gray-800">
@@ -820,7 +864,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                 </div>
               </div>
 
-              <div className="space-y-5">
+              <div className="space-y-5 overflow-y-auto flex-1 pr-2 custom-scrollbar">
                 {wishList.length === 0 ? (
                   <div className="text-center py-10 text-gray-400">
                     <MessageCircleHeart
@@ -834,60 +878,72 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                 ) : (
                   <div className="space-y-3">
                     {wishList.map(
-                      (w: NonNullable<EventData>["wishes"][number]) => (
-                        <div
-                          key={w.id}
-                          className="group border-b border-gray-50 last:border-0 pb-4 last:pb-0"
-                        >
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="flex-1 min-w-0">
-                              <p className="font-bold text-gray-800 text-sm">
-                                {w.wisherName}
-                              </p>
-                              <p className="text-sm text-gray-500 mt-0.5 leading-relaxed italic">
-                                &ldquo;{w.message}&rdquo;
-                              </p>
-                              <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mt-1">
-                                {new Date(w.submittedAt).toLocaleDateString(
-                                  "en-US",
-                                  {
-                                    month: "short",
-                                    day: "numeric",
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  },
-                                )}
-                              </p>
-                            </div>
-                            {confirmDeleteId === w.id ? (
-                              <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                      (
+                        w: NonNullable<EventData>["wishes"][number],
+                        idx: number,
+                      ) => {
+                        const isLast = idx === wishList.length - 1;
+                        return (
+                          <div
+                            key={w.id}
+                            ref={isLast ? lastWishElementRef : null}
+                            className="group border-b border-gray-50 last:border-0 pb-4 last:pb-0"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="flex-1 min-w-0">
+                                <p className="font-bold text-gray-800 text-sm">
+                                  {w.wisherName}
+                                </p>
+                                <p className="text-sm text-gray-500 mt-0.5 leading-relaxed italic">
+                                  &ldquo;{w.message}&rdquo;
+                                </p>
+                                <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mt-1">
+                                  {new Date(w.submittedAt).toLocaleDateString(
+                                    "en-US",
+                                    {
+                                      month: "short",
+                                      day: "numeric",
+                                      hour: "2-digit",
+                                      minute: "2-digit",
+                                    },
+                                  )}
+                                </p>
+                              </div>
+                              {confirmDeleteId === w.id ? (
+                                <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+                                  <button
+                                    onClick={() => handleDelete(w.id)}
+                                    disabled={deleteLoading === w.id}
+                                    className="rounded-lg bg-red-500 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-600 transition-colors"
+                                  >
+                                    {deleteLoading === w.id ? "..." : "Confirm"}
+                                  </button>
+                                  <button
+                                    onClick={() => setConfirmDeleteId(null)}
+                                    className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                                  >
+                                    Cancel
+                                  </button>
+                                </div>
+                              ) : (
                                 <button
                                   onClick={() => handleDelete(w.id)}
                                   disabled={deleteLoading === w.id}
-                                  className="rounded-lg bg-red-500 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-600 transition-colors"
+                                  className="mt-0.5 shrink-0 text-gray-300 hover:text-red-400 transition-colors"
+                                  title="Delete wish"
                                 >
-                                  {deleteLoading === w.id ? "..." : "Confirm"}
+                                  <Trash2 size={14} />
                                 </button>
-                                <button
-                                  onClick={() => setConfirmDeleteId(null)}
-                                  className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
-                                >
-                                  Cancel
-                                </button>
-                              </div>
-                            ) : (
-                              <button
-                                onClick={() => handleDelete(w.id)}
-                                disabled={deleteLoading === w.id}
-                                className="mt-0.5 shrink-0 text-gray-300 hover:text-red-400 transition-colors"
-                                title="Delete wish"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            )}
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ),
+                        );
+                      },
+                    )}
+                    {loadingMore && (
+                      <div className="py-4 text-center text-xs font-semibold text-gray-400 animate-pulse">
+                        Loading more wishes...
+                      </div>
                     )}
                   </div>
                 )}

@@ -131,9 +131,20 @@ export async function getAdminEvent(eventId: string) {
   return db.event.findUnique({
     where: { id: eventId },
     include: {
-      wishes: { orderBy: { submittedAt: "desc" } },
+      wishes: { orderBy: { submittedAt: "desc" }, take: 15 },
       audioTracks: { orderBy: { order: "asc" } },
+      _count: { select: { wishes: true } },
     },
+  });
+}
+
+export async function getAdminWishesPage(eventId: string, cursor: string) {
+  return db.wish.findMany({
+    where: { eventId },
+    orderBy: { submittedAt: "desc" },
+    take: 15,
+    skip: 1,
+    cursor: { id: cursor },
   });
 }
 
