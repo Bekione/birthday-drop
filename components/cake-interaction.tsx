@@ -1,49 +1,52 @@
-"use client"
+"use client";
 
-import type React from "react"
-import { useState, useRef, useEffect } from "react"
-import Image from "next/image"
+import type React from "react";
+import { useState, useRef, useEffect } from "react";
+import Image from "next/image";
 
 type CakeInteractionProps = {
-  onWishMade: () => void
-  blowAudioRef?: React.RefObject<HTMLAudioElement | null>
-}
+  onWishMade: () => void;
+  blowAudioRef?: React.RefObject<HTMLAudioElement | null>;
+};
 
-export function CakeInteraction({ onWishMade, blowAudioRef }: CakeInteractionProps) {
-  const [candleLit, setCandleLit] = useState(false)
-  const [wishMade, setWishMade] = useState(false)
-  const internalAudioRef = useRef<HTMLAudioElement>(null)
-  const audioRef = blowAudioRef ?? internalAudioRef
+export function CakeInteraction({
+  onWishMade,
+  blowAudioRef,
+}: CakeInteractionProps) {
+  const [candleLit, setCandleLit] = useState(false);
+  const [wishMade, setWishMade] = useState(false);
+  const internalAudioRef = useRef<HTMLAudioElement>(null);
+  const audioRef = blowAudioRef ?? internalAudioRef;
 
   // Preload the lit cake image
   useEffect(() => {
-    const litCakeImage = new window.Image()
-    litCakeImage.src = "/images/cake-lit.png"
-  }, [])
+    const litCakeImage = new window.Image();
+    litCakeImage.src = "/images/cool-cake-lit.png";
+  }, []);
 
   const handleCakeClick = () => {
     if (!candleLit) {
       // Light the candle
-      setCandleLit(true)
-      setWishMade(false) // Reset wish made state if re-lighting
+      setCandleLit(true);
+      setWishMade(false); // Reset wish made state if re-lighting
     } else if (candleLit && !wishMade) {
       // "Blow out" the candle
       if (audioRef.current) {
-        audioRef.current.play()
+        audioRef.current.play();
       }
       // Add a tiny delay to sync with the woosh sound
       setTimeout(() => {
-        setCandleLit(false)
-        setWishMade(true)
+        setCandleLit(false);
+        setWishMade(true);
         // Notify parent that the wish has been made
         try {
-          onWishMade()
+          onWishMade();
         } catch {
           // no-op if not provided
         }
-      }, 300) // A little delay to sync with sound
+      }, 300); // A little delay to sync with sound
     }
-  }
+  };
 
   return (
     <div className="relative flex flex-col items-center">
@@ -52,11 +55,17 @@ export function CakeInteraction({ onWishMade, blowAudioRef }: CakeInteractionPro
         onClick={handleCakeClick}
       >
         <Image
-          src={candleLit ? "/images/cake-lit.png" : "/images/cake.png"}
-          alt={candleLit ? "Birthday cake with lit candles" : "Birthday cake with unlit candles"}
-          width={192}
-          height={192}
-          className="object-contain drop-shadow-lg transition-opacity duration-300" // Smooth opacity transition
+          src={
+            candleLit ? "/images/cool-cake-lit.png" : "/images/cool-cake.png"
+          }
+          alt={
+            candleLit
+              ? "Birthday cake with lit candles"
+              : "Birthday cake with unlit candles"
+          }
+          width={220}
+          height={220}
+          className="object-contain drop-shadow-2xl transition-opacity duration-300"
         />
       </div>
       <p className="mt-4 text-xl font-semibold text-purple-700">
@@ -74,5 +83,5 @@ export function CakeInteraction({ onWishMade, blowAudioRef }: CakeInteractionPro
         />
       )}
     </div>
-  )
+  );
 }
