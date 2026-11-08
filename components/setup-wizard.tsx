@@ -29,6 +29,55 @@ import { useState } from "react";
 
 const STEPS = ["Who?", "Theme", "Music", "Security", "Done!"];
 
+const CELEBRATION_OPTIONS = [
+  {
+    id: "family",
+    label: "Family",
+    icon: "/icons/home-heart.svg",
+    desc: "Mom, Dad, Relatives",
+  },
+  {
+    id: "friends",
+    label: "Friends",
+    icon: "/icons/people.svg",
+    desc: "Besties & Squad",
+  },
+  {
+    id: "workplace",
+    label: "Workplace",
+    icon: "/icons/briefcase.svg",
+    desc: "Team & Coworkers",
+  },
+  {
+    id: "other",
+    label: "Other",
+    icon: "/icons/star.svg",
+    desc: "Community & Club",
+  },
+];
+
+function toDateInputValue(str: string): string {
+  if (!str) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function formatDateDisplay(isoDate: string): string {
+  if (!isoDate) return "";
+  const [year, month, day] = isoDate.split("-").map(Number);
+  const d = new Date(year, month - 1, day);
+  return d.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
 // Step slide animation variants
 const variants = {
   enter: (dir: number) => ({
@@ -52,6 +101,9 @@ export function SetupWizard() {
     personName,
     birthDate,
     photoPreview,
+    celebrationType,
+    customHeading,
+    flipCards,
     teaserMessage,
     allowAnonymous,
     theme,
@@ -183,6 +235,9 @@ export function SetupWizard() {
         birthDate: birthDate.trim(),
         personPhotoUrl: photoUrl,
         theme,
+        celebrationType,
+        customHeading: customHeading.trim() || undefined,
+        flipCards,
         audioConfig: {
           selectedTrackId: customTrackUrl ? "custom" : selectedTrackId,
           loop: audioLoop,
@@ -317,32 +372,110 @@ export function SetupWizard() {
                         </p>
                       )}
                     </div>
+                    {/* Birthday Date Selector */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Birthday (display format) *
+                      <label htmlFor="birthDate" className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Birthday Date *
                       </label>
                       <input
                         id="birthDate"
-                        type="text"
-                        placeholder="e.g. Aug 10, 2025"
-                        value={birthDate}
+                        type="date"
+                        value={toDateInputValue(birthDate)}
                         onChange={(e) => {
-                          setField("birthDate", e.target.value);
-                          if (fieldErrors.birthDate)
+                          const val = e.target.value;
+                          if (!val) {
+                            setField("birthDate", "");
+                            return;
+                          }
+                          const formatted = formatDateDisplay(val);
+                          setField("birthDate", formatted);
+                          if (fieldErrors.birthDate) {
                             setFieldErrors((p) => {
                               const n = { ...p };
                               delete n.birthDate;
                               return n;
                             });
+                          }
                         }}
                         className={field("birthDate").className}
                       />
+                      {birthDate && (
+                        <div className="mt-2 flex items-center gap-2">
+                          <span className="text-xs text-gray-500 font-medium">Display on surprise page:</span>
+                          <span className="inline-flex items-center gap-1.5 text-xs font-bold text-purple-700 bg-purple-100 border border-purple-200 px-2.5 py-0.5 rounded-full">
+                            <Image src="/icons/birthday-cake.svg" width={14} height={14} alt="Cake" />
+                            <span>{birthDate}</span>
+                          </span>
+                        </div>
+                      )}
                       {fieldErrors.birthDate && (
                         <p className="text-xs text-red-500 mt-1">
                           {fieldErrors.birthDate}
                         </p>
                       )}
                     </div>
+
+                    {/* Celebration Setting */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Celebration Setting *
+                      </label>
+                      <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
+                        {CELEBRATION_OPTIONS.map((item) => {
+                          const isSelected = (celebrationType || "family") === item.id;
+                          return (
+                            <button
+                              key={item.id}
+                              type="button"
+                              onClick={() => setField("celebrationType", item.id as any)}
+                              className={`flex flex-col items-center justify-center p-3 rounded-2xl border text-center transition-all cursor-pointer ${
+                                isSelected
+                                  ? "border-purple-600 bg-purple-50/80 text-purple-900 shadow-sm ring-2 ring-purple-400/30"
+                                  : "border-gray-200 bg-white hover:border-purple-200 text-gray-700"
+                              }`}
+                            >
+                              <div className="w-10 h-10 mb-1.5 flex items-center justify-center">
+                                <Image
+                                  src={item.icon}
+                                  alt={item.label}
+                                  width={34}
+                                  height={34}
+                                  className={`object-contain transition-transform ${isSelected ? "scale-105" : "opacity-80"}`}
+                                />
+                              </div>
+                              <span className="text-xs font-bold">{item.label}</span>
+                              <span className="text-[10px] text-gray-400 mt-0.5">{item.desc}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Custom Wish Section Title */}
+                    <div>
+                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
+                        Wishes Section Title (optional override)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder={
+                          celebrationType === "friends"
+                            ? "Default: Wishes from Friends!"
+                            : celebrationType === "workplace"
+                              ? "Default: Wishes from the Team!"
+                              : celebrationType === "other"
+                                ? "Default: Birthday Wishes!"
+                                : "Default: Wishes from Family & Loved Ones!"
+                        }
+                        value={customHeading}
+                        onChange={(e) => setField("customHeading", e.target.value)}
+                        className="w-full rounded-xl border border-gray-200 px-4 py-2.5 text-gray-800 placeholder:text-gray-400 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 transition-all"
+                      />
+                      <p className="text-[11px] text-gray-400 mt-1">
+                        Shown on the surprise page (e.g. &ldquo;Wishes for Mom!&rdquo; or &ldquo;Love from the Johnson Family&rdquo;).
+                      </p>
+                    </div>
+
                     {/* Photo upload */}
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-1.5">
@@ -408,6 +541,72 @@ export function SetupWizard() {
                       <span className="text-sm text-gray-600">
                         Allow anonymous wishes (no name required)
                       </span>
+                    </div>
+
+                    {/* Wish Card Reveal Style Selector */}
+                    <div className="pt-2">
+                      <label className="block text-sm font-semibold text-gray-700 mb-2">
+                        Wish Cards Reveal Style
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setField("flipCards", true)}
+                          className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between cursor-pointer ${
+                            flipCards
+                              ? "border-purple-600 bg-purple-50/70 shadow-sm ring-2 ring-purple-400/30"
+                              : "border-gray-200 hover:border-gray-300 bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <Image src="/icons/gift-box.svg" width={28} height={28} alt="Gift Box" />
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                flipCards
+                                  ? "bg-purple-600 text-white"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              Recommended
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-gray-900 mb-0.5">
+                            3D Flip to Reveal
+                          </p>
+                          <p className="text-xs text-gray-500 leading-snug">
+                            Interactive gift cards! Recipient taps each card to flip and discover the wish & reactions.
+                          </p>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setField("flipCards", false)}
+                          className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between cursor-pointer ${
+                            !flipCards
+                              ? "border-purple-600 bg-purple-50/70 shadow-sm ring-2 ring-purple-400/30"
+                              : "border-gray-200 hover:border-gray-300 bg-white"
+                          }`}
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <Image src="/icons/scroll.svg" width={28} height={28} alt="Scroll" />
+                            <span
+                              className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                !flipCards
+                                  ? "bg-purple-600 text-white"
+                                  : "bg-gray-100 text-gray-500"
+                              }`}
+                            >
+                              Instant Open
+                            </span>
+                          </div>
+                          <p className="text-sm font-bold text-gray-900 mb-0.5">
+                            Open Celebration Wall
+                          </p>
+                          <p className="text-xs text-gray-500 leading-snug">
+                            All messages are immediately visible on screen in a colorful masonry celebration wall.
+                          </p>
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -801,7 +1000,9 @@ export function SetupWizard() {
               {step === 4 && result && (
                 <div className="p-8 text-center">
                   <div className="flex justify-center mb-4">
-                    <div className="text-6xl animate-bounce">🎉</div>
+                    <div className="animate-bounce">
+                      <Image src="/icons/party-popper.svg" width={64} height={64} alt="Party" />
+                    </div>
                   </div>
                   <h2 className="text-3xl font-adlam text-purple-700 mb-2">
                     Your surprise is ready!

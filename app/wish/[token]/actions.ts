@@ -10,7 +10,10 @@ export async function getWishFormData(token: string) {
     select: {
       id: true,
       personName: true,
+      personPhotoUrl: true,
       birthDate: true,
+      celebrationType: true,
+      customHeading: true,
       wishDeadline: true,
       allowAnonymous: true,
       teaserMessage: true,
@@ -71,12 +74,28 @@ export async function submitWish(
   return { success: true };
 }
 
-export async function addReaction(wishId: string, emoji: string) {
+export async function toggleReaction(
+  wishId: string,
+  emoji: string,
+  isAdding: boolean,
+) {
   const wish = await db.wish.findUnique({ where: { id: wishId } });
-  if (!wish) return;
+  if (!wish) return { success: false, count: 0 };
 
   const reactions = (wish.reactions as Record<string, number>) ?? {};
-  reactions[emoji] = (reactions[emoji] ?? 0) + 1;
+  const currentCount = reactions[emoji] ?? 0;
+  const newCount = isAdding ? currentCount + 1 : Math.max(0, currentCount - 1);
+
+  if (newCount === 0) {
+    delete reactions[emoji];
+  } else {
+    reactions[emoji] = newCount;
+  }
 
   await db.wish.update({ where: { id: wishId }, data: { reactions } });
+  return { success: true, count: newCount };
+}
+
+export async function addReaction(wishId: string, emoji: string) {
+  return toggleReaction(wishId, emoji, true);
 }

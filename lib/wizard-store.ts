@@ -11,6 +11,9 @@ export interface WizardState {
   birthDate: string;
   photoFile: File | null;
   photoPreview: string | null;
+  celebrationType: "family" | "friends" | "workplace" | "other";
+  customHeading: string;
+  flipCards: boolean;
   teaserMessage: string;
   allowAnonymous: boolean;
 
@@ -44,6 +47,9 @@ const defaults = {
   birthDate: "",
   photoFile: null,
   photoPreview: null,
+  celebrationType: "family" as const,
+  customHeading: "",
+  flipCards: true,
   teaserMessage: "",
   allowAnonymous: true,
   theme: "confetti" as ThemeId,

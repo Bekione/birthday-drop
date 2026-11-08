@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Logo } from "@/components/logo";
 import { HashScroller } from "@/components/hash-scroller";
+import { LandingLiveDemo } from "@/components/landing-live-demo";
 import {
   Palette,
   Link2,
@@ -113,147 +114,145 @@ const howItWorks = [
   },
 ];
 
-/** Small confetti pieces scattered around the hero */
+/** Ambient calm floating confetti pieces scattered around the hero */
 const CONFETTI = [
+  { shape: "rect", w: 10, h: 4, top: 9, left: 13, rot: 15, color: "#f97316", anim: "animate-ambient-drift", dur: 12.5, delay: -3.1 },
+  { shape: "circle", w: 6, h: 6, top: 18, left: 24, rot: 0, color: "#a855f7", anim: "animate-soft-float", dur: 14, delay: -6.4 },
+  { shape: "rect", w: 12, h: 5, top: 7, left: 34, rot: -12, color: "#ec4899", anim: "animate-calm-sway", dur: 15, delay: -1.8 },
+  { shape: "star", w: 8, h: 8, top: 12, left: 62, rot: 25, color: "#eab308", anim: "animate-ambient-wander", dur: 13, delay: -8.2 },
+  { shape: "rect", w: 9, h: 3.5, top: 22, left: 74, rot: -20, color: "#06b6d4", anim: "animate-petal-drift", dur: 16, delay: -4.5 },
+  { shape: "circle", w: 7, h: 7, top: 9, left: 84, rot: 0, color: "#f43f5e", anim: "animate-ambient-drift", dur: 11.5, delay: -2.3 },
+  { shape: "rect", w: 13, h: 4.5, top: 73, left: 6, rot: 12, color: "#8b5cf6", anim: "animate-calm-sway", dur: 14.5, delay: -7.1 },
+  { shape: "star", w: 9, h: 9, top: 81, left: 18, rot: -15, color: "#f97316", anim: "animate-soft-float", dur: 13, delay: -5.6 },
+  { shape: "rect", w: 8, h: 3, top: 67, left: 65, rot: 35, color: "#10b981", anim: "animate-ambient-wander", dur: 15.5, delay: -9.4 },
+  { shape: "circle", w: 5, h: 5, top: 83, left: 82, rot: 0, color: "#ec4899", anim: "animate-petal-drift", dur: 12.5, delay: -3.7 },
+  { shape: "rect", w: 10, h: 4, top: 77, left: 93, rot: -10, color: "#a855f7", anim: "animate-ambient-drift", dur: 14, delay: -8.0 },
+  { shape: "star", w: 7, h: 7, top: 38, left: 2, rot: 45, color: "#eab308", anim: "animate-calm-sway", dur: 16.5, delay: -1.2 },
+  { shape: "rect", w: 11, h: 4, top: 52, left: 96, rot: 20, color: "#f43f5e", anim: "animate-soft-float", dur: 13.5, delay: -6.9 },
+  { shape: "circle", w: 6, h: 6, top: 62, left: 40, rot: 0, color: "#06b6d4", anim: "animate-ambient-wander", dur: 14.2, delay: -4.0 },
+];
+
+/** Ambient floating SVG icons with distinct, calm motion profiles */
+const HERO_FLOATING_ICONS = [
   {
-    shape: "rect",
-    w: 10,
-    h: 4,
-    top: 8,
-    left: 6,
-    rot: 20,
-    color: "#f97316",
-    delay: 0,
+    src: "/icons/gift-box.svg",
+    alt: "Gift",
+    top: 14,
+    left: 7,
+    size: 38,
+    anim: "animate-ambient-drift",
+    dur: 13.5,
+    delay: -4.2,
+    opacity: 0.82,
+    initialRotate: -6,
   },
   {
-    shape: "circle",
-    w: 6,
-    h: 6,
-    top: 15,
-    left: 18,
-    rot: 0,
-    color: "#a855f7",
-    delay: 0.4,
+    src: "/icons/sparkles.svg",
+    alt: "Sparkles",
+    top: 26,
+    left: 17,
+    size: 26,
+    anim: "animate-soft-float",
+    dur: 11,
+    delay: -7.8,
+    opacity: 0.65,
+    initialRotate: 8,
   },
   {
-    shape: "rect",
-    w: 12,
-    h: 5,
-    top: 5,
-    left: 35,
-    rot: -15,
-    color: "#ec4899",
-    delay: 0.8,
+    src: "/icons/love-letter.svg",
+    alt: "Love Letter",
+    top: 48,
+    left: 5,
+    size: 32,
+    anim: "animate-petal-drift",
+    dur: 15,
+    delay: -2.6,
+    opacity: 0.75,
+    initialRotate: -8,
   },
   {
-    shape: "star",
-    w: 8,
-    h: 8,
-    top: 10,
-    left: 55,
-    rot: 30,
-    color: "#eab308",
-    delay: 1.2,
+    src: "/icons/birthday-cake.svg",
+    alt: "Birthday Cake",
+    top: 72,
+    left: 9,
+    size: 40,
+    anim: "animate-calm-sway",
+    dur: 16,
+    delay: -9.1,
+    opacity: 0.85,
+    initialRotate: 4,
   },
   {
-    shape: "rect",
-    w: 8,
-    h: 3,
-    top: 20,
-    left: 72,
-    rot: -30,
-    color: "#06b6d4",
-    delay: 0.3,
-  },
-  {
-    shape: "circle",
-    w: 7,
-    h: 7,
-    top: 7,
-    left: 88,
-    rot: 0,
-    color: "#f43f5e",
-    delay: 1.6,
-  },
-  {
-    shape: "rect",
-    w: 14,
-    h: 5,
-    top: 75,
-    left: 4,
-    rot: 10,
-    color: "#8b5cf6",
-    delay: 0.6,
-  },
-  {
-    shape: "star",
-    w: 9,
-    h: 9,
-    top: 82,
+    src: "/icons/candle.svg",
+    alt: "Candle",
+    top: 86,
     left: 22,
-    rot: -20,
-    color: "#f97316",
-    delay: 2,
+    size: 28,
+    anim: "animate-soft-float",
+    dur: 12.5,
+    delay: -5.3,
+    opacity: 0.7,
+    initialRotate: -4,
   },
   {
-    shape: "rect",
-    w: 8,
-    h: 3,
-    top: 68,
-    left: 62,
-    rot: 45,
-    color: "#10b981",
-    delay: 1,
+    src: "/icons/party-popper.svg",
+    alt: "Party Popper",
+    top: 15,
+    left: 89,
+    size: 38,
+    anim: "animate-calm-sway",
+    dur: 14,
+    delay: -6.4,
+    opacity: 0.82,
+    initialRotate: 12,
   },
   {
-    shape: "circle",
-    w: 5,
-    h: 5,
-    top: 85,
+    src: "/icons/star.svg",
+    alt: "Star",
+    top: 28,
     left: 80,
-    rot: 0,
-    color: "#ec4899",
-    delay: 1.8,
+    size: 24,
+    anim: "animate-ambient-wander",
+    dur: 12,
+    delay: -1.9,
+    opacity: 0.65,
+    initialRotate: -5,
   },
   {
-    shape: "rect",
-    w: 10,
-    h: 4,
-    top: 78,
+    src: "/icons/party-face.svg",
+    alt: "Party Face",
+    top: 46,
     left: 92,
-    rot: -10,
-    color: "#a855f7",
-    delay: 0.5,
+    size: 36,
+    anim: "animate-ambient-drift",
+    dur: 14.5,
+    delay: -8.7,
+    opacity: 0.78,
+    initialRotate: -4,
   },
   {
-    shape: "star",
-    w: 7,
-    h: 7,
-    top: 40,
-    left: 3,
-    rot: 60,
-    color: "#eab308",
-    delay: 2.4,
+    src: "/icons/scroll.svg",
+    alt: "Scroll",
+    top: 74,
+    left: 88,
+    size: 32,
+    anim: "animate-petal-drift",
+    dur: 16.5,
+    delay: -3.8,
+    opacity: 0.75,
+    initialRotate: 6,
   },
   {
-    shape: "rect",
-    w: 11,
-    h: 4,
-    top: 50,
-    left: 95,
-    rot: 25,
-    color: "#f43f5e",
-    delay: 0.9,
-  },
-  {
-    shape: "circle",
-    w: 6,
-    h: 6,
-    top: 60,
-    left: 42,
-    rot: 0,
-    color: "#06b6d4",
-    delay: 1.4,
+    src: "/icons/sparkles.svg",
+    alt: "Sparkles",
+    top: 85,
+    left: 76,
+    size: 26,
+    anim: "animate-soft-float",
+    dur: 11.5,
+    delay: -10.2,
+    opacity: 0.65,
+    initialRotate: -10,
   },
 ];
 
@@ -309,15 +308,15 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-0 overflow-hidden">
           {CONFETTI.map((c, i) => (
             <span
-              key={i}
-              className="absolute animate-float-star"
+              key={`confetti-${i}`}
+              className={`absolute pointer-events-none select-none ${c.anim}`}
               style={
                 {
                   top: `${c.top}%`,
                   left: `${c.left}%`,
                   transform: `rotate(${c.rot}deg)`,
                   animationDelay: `${c.delay}s`,
-                  "--animation-duration": `${6 + (i % 4)}s`,
+                  "--animation-duration": `${c.dur}s`,
                 } as React.CSSProperties
               }
             >
@@ -328,8 +327,8 @@ export default function Home() {
                     width: c.w,
                     height: c.h,
                     backgroundColor: c.color,
-                    borderRadius: 2,
-                    opacity: 0.75,
+                    borderRadius: 3,
+                    opacity: 0.7,
                   }}
                 />
               )}
@@ -341,7 +340,7 @@ export default function Home() {
                     height: c.h,
                     backgroundColor: c.color,
                     borderRadius: "50%",
-                    opacity: 0.75,
+                    opacity: 0.7,
                   }}
                 />
               )}
@@ -350,7 +349,7 @@ export default function Home() {
                   width={c.w}
                   height={c.h}
                   viewBox="0 0 10 10"
-                  style={{ opacity: 0.8 }}
+                  style={{ opacity: 0.75 }}
                 >
                   <polygon
                     points="5,0 6.5,3.5 10,3.5 7,5.5 8.5,9 5,7 1.5,9 3,5.5 0,3.5 3.5,3.5"
@@ -361,54 +360,52 @@ export default function Home() {
             </span>
           ))}
 
-          {/* Floating birthday emojis */}
-          {(
-            [
-              { e: "🎈", top: 12, left: 8, dur: 7, delay: 0 },
-              { e: "🎁", top: 70, left: 15, dur: 9, delay: 1.2 },
-              { e: "🎊", top: 30, left: 78, dur: 6, delay: 0.4 },
-              { e: "⭐", top: 80, left: 55, dur: 8, delay: 2 },
-              { e: "🥳", top: 18, left: 45, dur: 7, delay: 0.8 },
-              { e: "🎂", top: 55, left: 85, dur: 6, delay: 1.5 },
-              { e: "💖", top: 40, left: 25, dur: 9, delay: 0.2 },
-              { e: "🎶", top: 88, left: 72, dur: 7, delay: 3 },
-            ] as {
-              e: string;
-              top: number;
-              left: number;
-              dur: number;
-              delay: number;
-            }[]
-          ).map(({ e, top, left, dur, delay }, i) => (
-            <span
-              key={`emoji-${i}`}
-              className="absolute text-2xl opacity-60 select-none hidden sm:block animate-float-star"
+          {/* Calm Ambient Floating SVG Icons (Natural Video-like Motion) */}
+          {HERO_FLOATING_ICONS.map((item, i) => (
+            <div
+              key={`hero-icon-${i}`}
+              className={`absolute pointer-events-none select-none hidden sm:block ${item.anim}`}
               style={
                 {
-                  top: `${top}%`,
-                  left: `${left}%`,
-                  "--animation-duration": `${dur}s`,
-                  animationDelay: `${delay}s`,
+                  top: `${item.top}%`,
+                  left: `${item.left}%`,
+                  opacity: item.opacity,
+                  filter: "drop-shadow(0 8px 18px rgba(0,0,0,0.06))",
+                  animationDelay: `${item.delay}s`,
+                  "--animation-duration": `${item.dur}s`,
+                  transform: item.initialRotate
+                    ? `rotate(${item.initialRotate}deg)`
+                    : undefined,
                 } as React.CSSProperties
               }
             >
-              {e}
-            </span>
+              <Image
+                src={item.src}
+                alt={item.alt}
+                width={item.size}
+                height={item.size}
+                className="object-contain"
+                priority
+              />
+            </div>
           ))}
         </div>
 
         <div className="relative mx-auto max-w-4xl w-full">
           {/* Badge */}
-          <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/70 border border-purple-100 px-4 py-1.5 text-xs sm:text-sm font-medium text-purple-600 shadow-sm backdrop-blur">
-            <span className="animate-pulse">✨</span>
-            The easiest birthday surprise tool for teams
+          <div className="mb-5 inline-flex items-center gap-2 rounded-full bg-white/80 border border-purple-200/80 px-4 py-1.5 text-xs sm:text-sm font-semibold text-purple-700 shadow-sm backdrop-blur">
+            <Image src="/icons/sparkles.svg" width={16} height={16} alt="Sparkles" className="inline" />
+            The easiest birthday surprise tool for family, friends & teams
           </div>
 
           {/* Heading */}
           <h1 className="mb-6 text-5xl lg:text-7xl font-adlam font-bold leading-tight text-purple-700">
             Surprise the people
             <br />
-            <span className="text-pink-600">you love 🎉</span>
+            <span className="text-pink-600 inline-flex items-center gap-2">
+              <span>you love</span>
+              <Image src="/icons/party-popper.svg" width={48} height={48} alt="Party" className="inline align-middle" />
+            </span>
           </h1>
 
           {/* Sub */}
@@ -423,23 +420,18 @@ export default function Home() {
             <Link
               href="/setup"
               id="hero-cta"
-              className="group relative overflow-hidden rounded-full flex items-center gap-2 bg-purple-600 hover:bg-purple-700 px-8 py-4 text-lg sm:text-xl font-bold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl w-full sm:w-auto"
+              className="group relative overflow-hidden rounded-full flex items-center justify-center gap-2 bg-purple-600 hover:bg-purple-700 px-8 py-4 text-lg sm:text-xl font-bold text-white shadow-xl transition-all duration-300 hover:scale-105 hover:shadow-2xl w-full sm:w-auto"
             >
               <Gift size={20} className="relative z-10 text-white/90" />
               <span className="relative z-10">Create a Surprise</span>
               <span className="absolute inset-0 bg-gradient-to-r from-purple-600 to-pink-500 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
             </Link>
             <a
-              href="#how"
-              className="hidden sm:block rounded-full border border-purple-200 bg-white px-8 py-4 text-lg font-semibold text-purple-700 transition-all duration-200 hover:border-purple-400 hover:shadow-md"
+              href="#demo"
+              className="rounded-full border-2 border-purple-300 bg-white/90 backdrop-blur px-8 py-4 text-lg font-bold text-purple-700 transition-all duration-200 hover:border-purple-500 hover:bg-purple-50 hover:shadow-md flex items-center justify-center gap-2 w-full sm:w-auto"
             >
-              How it works ↓
-            </a>
-            <a
-              href="#how"
-              className="sm:hidden text-sm font-medium text-purple-500 hover:underline"
-            >
-              How it works ↓
+              <span>Try Live Demo</span>
+              <Image src="/icons/sparkles.svg" width={18} height={18} alt="Sparkles" className="inline" />
             </a>
           </div>
         </div>
@@ -508,6 +500,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── Interactive Live Demo ── */}
+      <LandingLiveDemo />
 
       {/* ── Features ── */}
       {/* Top wave */}
@@ -740,8 +735,9 @@ export default function Home() {
         </div>
 
         <div className="relative mx-auto max-w-2xl">
-          <h2 className="mb-4 text-3xl sm:text-4xl font-adlam md:text-5xl">
-            Ready to make someone&apos;s day? 🎉
+          <h2 className="mb-4 text-3xl sm:text-4xl font-adlam md:text-5xl flex items-center justify-center gap-3">
+            <span>Ready to make someone&apos;s day?</span>
+            <Image src="/icons/party-popper.svg" width={44} height={44} alt="Party" className="inline align-middle" />
           </h2>
           <p className="mb-8 sm:mb-10 text-base sm:text-lg text-white/80">
             It only takes 2 minutes to set up. Your team will love it.

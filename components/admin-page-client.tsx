@@ -5,6 +5,8 @@ import {
   verifyAdminPassword,
   getAdminEvent,
   deleteWish,
+  toggleWishVisibility,
+  toggleWishFeatured,
   updateEvent,
   getAdminWishesPage,
 } from "@/app/actions";
@@ -13,6 +15,10 @@ import { Logo } from "@/components/logo";
 import Image from "next/image";
 import {
   Eye,
+  EyeOff,
+  Star,
+  Send,
+  MessageCircle,
   Edit2,
   X,
   Save,
@@ -45,6 +51,17 @@ type EventData = Awaited<ReturnType<typeof getAdminEvent>>;
 
 const SESSION_KEY = (eventId: string) => `admin_authed_${eventId}`;
 
+function toDateInputValue(str: string): string {
+  if (!str) return "";
+  if (/^\d{4}-\d{2}-\d{2}$/.test(str)) return str;
+  const d = new Date(str);
+  if (isNaN(d.getTime())) return "";
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 export function AdminPageClient({ eventId }: AdminPageClientProps) {
   const [authed, setAuthed] = useState(false);
   const [loading, setLoading] = useState(true); // checking sessionStorage
@@ -62,6 +79,9 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
   const [editName, setEditName] = useState("");
   const [editDate, setEditDate] = useState("");
   const [editTheme, setEditTheme] = useState<ThemeId>("confetti");
+  const [editCelebrationType, setEditCelebrationType] = useState("family");
+  const [editCustomHeading, setEditCustomHeading] = useState("");
+  const [editFlipCards, setEditFlipCards] = useState(false);
   const [editDeadline, setEditDeadline] = useState("");
   const [editTeaser, setEditTeaser] = useState("");
 
@@ -141,6 +161,9 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
           setEditName(data.personName);
           setEditDate(data.birthDate);
           setEditTheme((data.theme as ThemeId) ?? "confetti");
+          setEditCelebrationType(data.celebrationType ?? "family");
+          setEditCustomHeading(data.customHeading ?? "");
+          setEditFlipCards(data.flipCards ?? false);
           setEditDeadline(
             data.wishDeadline
               ? new Date(data.wishDeadline).toISOString().slice(0, 16)
@@ -165,12 +188,13 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     }
   }, [eventId]);
 
-  // Auto-poll every 15 s once authenticated
+  // Auto-poll every 6 s once authenticated so new wishes reflect promptly
   useEffect(() => {
     if (!authed) return;
     const poll = setInterval(async () => {
       const data = await getAdminEvent(eventId);
       if (data) {
+        setEvent(data);
         setWishList((prev) => {
           // Merge newly fetched wishes safely at the top without touching hasMore
           const newIds = new Set(data.wishes.map((w: any) => w.id));
@@ -179,7 +203,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         });
         setLastRefreshed(new Date());
       }
-    }, 15_000);
+    }, 6_000);
     return () => clearInterval(poll);
   }, [authed, eventId]);
 
@@ -187,6 +211,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     setRefreshing(true);
     const data = await getAdminEvent(eventId);
     if (data) {
+      setEvent(data);
       setWishList(data.wishes);
       setHasMore(data.wishes.length === 15);
       setLastRefreshed(new Date());
@@ -208,6 +233,9 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
       setEditName(data?.personName ?? "");
       setEditDate(data?.birthDate ?? "");
       setEditTheme((data?.theme as ThemeId) ?? "confetti");
+      setEditCelebrationType(data?.celebrationType ?? "family");
+      setEditCustomHeading(data?.customHeading ?? "");
+      setEditFlipCards(data?.flipCards ?? false);
       setEditDeadline(
         data?.wishDeadline
           ? new Date(data.wishDeadline).toISOString().slice(0, 16)
@@ -245,7 +273,41 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     setWishList((prev: NonNullable<EventData>["wishes"]) =>
       prev.filter((w: { id: string }) => w.id !== wishId),
     );
+    setEvent((prev) =>
+      prev
+        ? {
+            ...prev,
+            _count: {
+              wishes: Math.max(0, (prev._count?.wishes ?? 1) - 1),
+            },
+          }
+        : prev,
+    );
     setDeleteLoading(null);
+  };
+
+  const handleToggleVisibility = async (
+    wishId: string,
+    currentHidden: boolean,
+  ) => {
+    setWishList((prev: any) =>
+      prev.map((w: any) =>
+        w.id === wishId ? { ...w, isHidden: !currentHidden } : w,
+      ),
+    );
+    await toggleWishVisibility(wishId, !currentHidden);
+  };
+
+  const handleToggleFeatured = async (
+    wishId: string,
+    currentFeatured: boolean,
+  ) => {
+    setWishList((prev: any) =>
+      prev.map((w: any) =>
+        w.id === wishId ? { ...w, isFeatured: !currentFeatured } : w,
+      ),
+    );
+    await toggleWishFeatured(wishId, !currentFeatured);
   };
 
   const handleSave = async () => {
@@ -283,6 +345,9 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         personName: editName,
         birthDate: editDate,
         theme: editTheme,
+        celebrationType: editCelebrationType,
+        customHeading: editCustomHeading.trim() || null,
+        flipCards: editFlipCards,
         wishDeadline: editDeadline || null,
         teaserMessage: editTeaser,
         allowAnonymous: editAllowAnon,
@@ -303,6 +368,9 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
               personName: editName,
               birthDate: editDate,
               theme: editTheme,
+              celebrationType: editCelebrationType,
+              customHeading: editCustomHeading.trim() || null,
+              flipCards: editFlipCards,
               teaserMessage: editTeaser,
               allowAnonymous: editAllowAnon,
               audioConfig: {
@@ -392,7 +460,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
 
   if (!event) return null;
 
-  const getDaysInfo = () => {
+  const getDaysInfo = (): { count: React.ReactNode; label: string } => {
     // fall back to birthDate if no explicit deadline is set
     const deadline = event?.wishDeadline ?? event?.birthDate;
     if (!deadline) return { count: "—", label: "Days Left" };
@@ -404,7 +472,18 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     } else if (days === 1) {
       return { count: "1", label: "Day Left" };
     } else if (days === 0) {
-      return { count: "🎉", label: "It's Today!" };
+      return {
+        count: (
+          <Image
+            src="/icons/party-popper.svg"
+            width={32}
+            height={32}
+            alt="Today"
+            className="inline-block"
+          />
+        ),
+        label: "It's Today!",
+      };
     } else {
       return { count: "🎈", label: "Event Passed" };
     }
@@ -455,7 +534,7 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
           <div className="relative z-10 flex gap-4 w-full justify-center border-t border-purple-100/60 pt-6">
             <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-sm px-8 py-4 flex flex-col items-center justify-center border border-purple-100/50">
               <span className="text-3xl font-black text-purple-600 mb-0.5">
-                {event?._count?.wishes ?? wishList.length}
+                {Math.max(event?._count?.wishes ?? 0, wishList.length)}
               </span>
               <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest">
                 Wishes
@@ -493,13 +572,37 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
             </div>
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">
-                Birthday Display
+                Birthday Date
               </label>
               <input
-                value={editDate}
-                onChange={(e) => setEditDate(e.target.value)}
-                className="w-full rounded-2xl border-2 border-gray-100 px-4 py-3 text-sm focus:border-purple-300 focus:bg-purple-50/50 outline-none transition-all"
+                type="date"
+                value={toDateInputValue(editDate)}
+                onChange={(e) => {
+                  const val = e.target.value;
+                  if (!val) {
+                    setEditDate("");
+                    return;
+                  }
+                  const [year, month, day] = val.split("-").map(Number);
+                  const d = new Date(year, month - 1, day);
+                  setEditDate(
+                    d.toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    }),
+                  );
+                }}
+                className="w-full rounded-2xl border-2 border-gray-100 px-4 py-3 text-sm focus:border-purple-300 focus:bg-purple-50/50 outline-none transition-all cursor-pointer"
               />
+              {editDate && (
+                <p className="text-xs text-purple-700 font-semibold mt-1.5 flex items-center gap-1">
+                  <span>Display on surprise page:</span>
+                  <span className="bg-purple-100 border border-purple-200 px-2 py-0.5 rounded-full font-bold flex items-center gap-1">
+                    <Image src="/icons/birthday-cake.svg" width={14} height={14} alt="Cake" /> {editDate}
+                  </span>
+                </p>
+              )}
             </div>
             <div>
               <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">
@@ -544,6 +647,126 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                     </button>
                   );
                 })}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">
+                Celebration Setting
+              </label>
+              <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { id: "family", label: "Family", icon: "/icons/home-heart.svg" },
+                  { id: "friends", label: "Friends", icon: "/icons/people.svg" },
+                  { id: "workplace", label: "Workplace", icon: "/icons/briefcase.svg" },
+                  { id: "other", label: "Other", icon: "/icons/star.svg" },
+                ].map((item) => (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => setEditCelebrationType(item.id)}
+                    className={`flex flex-col items-center justify-center p-2.5 rounded-2xl border text-center transition-all cursor-pointer ${
+                      editCelebrationType === item.id
+                        ? "border-purple-600 bg-purple-50 text-purple-900 ring-2 ring-purple-400/30"
+                        : "border-gray-200 bg-white hover:border-purple-200 text-gray-700"
+                    }`}
+                  >
+                    <div className="w-8 h-8 mb-1 flex items-center justify-center">
+                      <Image
+                        src={item.icon}
+                        alt={item.label}
+                        width={26}
+                        height={26}
+                        className="object-contain"
+                      />
+                    </div>
+                    <span className="text-xs font-bold">{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-1 block">
+                Wishes Section Title (optional override)
+              </label>
+              <input
+                value={editCustomHeading}
+                onChange={(e) => setEditCustomHeading(e.target.value)}
+                placeholder={
+                  editCelebrationType === "friends"
+                    ? "Default: Wishes from Friends!"
+                    : editCelebrationType === "workplace"
+                      ? "Default: Wishes from the Team!"
+                      : editCelebrationType === "other"
+                        ? "Default: Birthday Wishes!"
+                        : "Default: Wishes from Family & Loved Ones!"
+                }
+                className="w-full rounded-2xl border-2 border-gray-100 px-4 py-3 text-sm focus:border-purple-300 focus:bg-purple-50/50 outline-none transition-all"
+              />
+            </div>
+
+            {/* Wish Card Reveal Style Selector */}
+            <div>
+              <label className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2 block">
+                Wish Cards Reveal Style
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditFlipCards(true)}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between cursor-pointer ${
+                    editFlipCards
+                      ? "border-purple-600 bg-purple-50/70 shadow-sm ring-2 ring-purple-400/30"
+                      : "border-gray-200 hover:border-gray-300 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <Image src="/icons/gift-box.svg" width={26} height={26} alt="Gift Box" />
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        editFlipCards
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      Interactive
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-gray-900 mb-0.5">
+                    3D Flip to Reveal
+                  </p>
+                  <p className="text-xs text-gray-500 leading-snug">
+                    Recipient taps cards to flip & reveal messages in 3D.
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setEditFlipCards(false)}
+                  className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between cursor-pointer ${
+                    !editFlipCards
+                      ? "border-purple-600 bg-purple-50/70 shadow-sm ring-2 ring-purple-400/30"
+                      : "border-gray-200 hover:border-gray-300 bg-white"
+                  }`}
+                >
+                  <div className="flex items-center justify-between mb-1.5">
+                    <Image src="/icons/scroll.svg" width={26} height={26} alt="Scroll" />
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        !editFlipCards
+                          ? "bg-purple-600 text-white"
+                          : "bg-gray-100 text-gray-500"
+                      }`}
+                    >
+                      Instant Open
+                    </span>
+                  </div>
+                  <p className="text-sm font-bold text-gray-900 mb-0.5">
+                    Open Celebration Wall
+                  </p>
+                  <p className="text-xs text-gray-500 leading-snug">
+                    All wishes are immediately visible across masonry cards.
+                  </p>
+                </button>
               </div>
             </div>
             <div>
@@ -808,7 +1031,39 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                       )}
                     </button>
                   </div>
-                  <p className="text-xs text-gray-400 font-medium">{l.desc}</p>
+                  <div className="flex items-center justify-between pt-0.5">
+                    <p className="text-xs text-gray-400 font-medium">{l.desc}</p>
+                    <div className="flex items-center gap-1.5">
+                      <a
+                        href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                          l.key === "wish"
+                            ? `Shh! 🤫 We're secretly collecting birthday wishes and memories for ${event.personName}'s birthday! 🎂 Add your wish here: ${base}/${l.path}/${l.token}`
+                            : `🎉 The birthday surprise for ${event.personName} is ready! Open it here: ${base}/${l.path}/${l.token}`,
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#25D366]/10 hover:bg-[#25D366]/20 text-[#128C7E] text-[11px] font-bold transition-colors"
+                        title="Share in WhatsApp chat or group"
+                      >
+                        <MessageCircle size={12} /> WhatsApp
+                      </a>
+                      <a
+                        href={`https://t.me/share/url?url=${encodeURIComponent(
+                          `${base}/${l.path}/${l.token}`,
+                        )}&text=${encodeURIComponent(
+                          l.key === "wish"
+                            ? `Shh! 🤫 We're secretly collecting birthday wishes for ${event.personName}! 🎂 Add your heartfelt message here:`
+                            : `🎉 ${event.personName}'s birthday surprise is live! Check it out:`,
+                        )}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#0088cc]/10 hover:bg-[#0088cc]/20 text-[#0088cc] text-[11px] font-bold transition-colors"
+                        title="Share in Telegram channel or group"
+                      >
+                        <Send size={12} /> Telegram
+                      </a>
+                    </div>
+                  </div>
                 </div>
               ))}
 
@@ -891,12 +1146,30 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                             ref={isLast ? lastWishElementRef : null}
                             className="group border-b border-gray-50 last:border-0 pb-4 last:pb-0"
                           >
-                            <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-start justify-between gap-3">
                               <div className="flex-1 min-w-0">
-                                <p className="font-bold text-gray-800 text-sm">
-                                  {w.wisherName}
-                                </p>
-                                <p className="text-sm text-gray-500 mt-0.5 leading-relaxed italic">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <p className="font-bold text-gray-800 text-sm">
+                                    {w.wisherName}
+                                  </p>
+                                  {w.isFeatured && (
+                                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-black bg-amber-100 text-amber-700">
+                                      <Star size={10} className="fill-amber-500 text-amber-500" /> Featured
+                                    </span>
+                                  )}
+                                  {w.isHidden && (
+                                    <span className="inline-flex items-center gap-0.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-gray-100 text-gray-500">
+                                      <EyeOff size={10} /> Hidden
+                                    </span>
+                                  )}
+                                </div>
+                                <p
+                                  className={`text-sm mt-0.5 leading-relaxed italic ${
+                                    w.isHidden
+                                      ? "text-gray-400 line-through"
+                                      : "text-gray-600"
+                                  }`}
+                                >
                                   &ldquo;{w.message}&rdquo;
                                 </p>
                                 <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider mt-1">
@@ -911,32 +1184,83 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                                   )}
                                 </p>
                               </div>
-                              {confirmDeleteId === w.id ? (
-                                <div className="flex items-center gap-1.5 shrink-0 mt-0.5">
+
+                              {/* Action Buttons: Feature, Hide/Unhide, Delete */}
+                              <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                                <button
+                                  onClick={() =>
+                                    handleToggleFeatured(w.id, !!w.isFeatured)
+                                  }
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    w.isFeatured
+                                      ? "text-amber-500 hover:bg-amber-50"
+                                      : "text-gray-300 hover:text-amber-400 hover:bg-gray-50"
+                                  }`}
+                                  title={
+                                    w.isFeatured
+                                      ? "Unpin from top"
+                                      : "Feature wish at the top of surprise wall"
+                                  }
+                                >
+                                  <Star
+                                    size={15}
+                                    className={
+                                      w.isFeatured
+                                        ? "fill-amber-400 text-amber-500"
+                                        : ""
+                                    }
+                                  />
+                                </button>
+
+                                <button
+                                  onClick={() =>
+                                    handleToggleVisibility(w.id, !!w.isHidden)
+                                  }
+                                  className={`p-1.5 rounded-lg transition-colors ${
+                                    w.isHidden
+                                      ? "text-amber-600 hover:bg-amber-50"
+                                      : "text-gray-300 hover:text-purple-600 hover:bg-gray-50"
+                                  }`}
+                                  title={
+                                    w.isHidden
+                                      ? "Unhide wish (will appear on surprise page)"
+                                      : "Hide wish from surprise page"
+                                  }
+                                >
+                                  {w.isHidden ? (
+                                    <EyeOff size={15} />
+                                  ) : (
+                                    <Eye size={15} />
+                                  )}
+                                </button>
+
+                                {confirmDeleteId === w.id ? (
+                                  <div className="flex items-center gap-1 shrink-0">
+                                    <button
+                                      onClick={() => handleDelete(w.id)}
+                                      disabled={deleteLoading === w.id}
+                                      className="rounded-lg bg-red-500 px-2.5 py-1 text-xs font-bold text-white hover:bg-red-600 transition-colors"
+                                    >
+                                      {deleteLoading === w.id ? "..." : "Delete"}
+                                    </button>
+                                    <button
+                                      onClick={() => setConfirmDeleteId(null)}
+                                      className="rounded-lg border border-gray-200 px-2 py-1 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
+                                    >
+                                      Cancel
+                                    </button>
+                                  </div>
+                                ) : (
                                   <button
                                     onClick={() => handleDelete(w.id)}
                                     disabled={deleteLoading === w.id}
-                                    className="rounded-lg bg-red-500 px-2.5 py-1.5 text-xs font-bold text-white hover:bg-red-600 transition-colors"
+                                    className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                                    title="Delete wish permanently"
                                   >
-                                    {deleteLoading === w.id ? "..." : "Confirm"}
+                                    <Trash2 size={15} />
                                   </button>
-                                  <button
-                                    onClick={() => setConfirmDeleteId(null)}
-                                    className="rounded-lg border border-gray-200 px-2 py-1.5 text-xs font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
-                                  >
-                                    Cancel
-                                  </button>
-                                </div>
-                              ) : (
-                                <button
-                                  onClick={() => handleDelete(w.id)}
-                                  disabled={deleteLoading === w.id}
-                                  className="mt-0.5 shrink-0 text-gray-300 hover:text-red-400 transition-colors"
-                                  title="Delete wish"
-                                >
-                                  <Trash2 size={14} />
-                                </button>
-                              )}
+                                )}
+                              </div>
                             </div>
                           </div>
                         );

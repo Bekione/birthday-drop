@@ -259,16 +259,77 @@
     transform: scale(0.7);
   }
 }
+
+/* ── Ambient Fluid Floating Physics (Calm, Natural, Organic Motion) ── */
+@keyframes ambientDrift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(0deg);
+  }
+  25% {
+    transform: translate3d(5px, -13px, 0) rotate(2.5deg);
+  }
+  50% {
+    transform: translate3d(-4px, -22px, 0) rotate(-2deg);
+  }
+  75% {
+    transform: translate3d(6px, -9px, 0) rotate(3deg);
+  }
+}
+
+@keyframes calmSway {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(-4deg);
+  }
+  50% {
+    transform: translate3d(-10px, -16px, 0) rotate(5deg);
+  }
+}
+
+@keyframes softFloat {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) scale(1) rotate(1deg);
+  }
+  35% {
+    transform: translate3d(4px, -14px, 0) scale(1.03) rotate(-2.5deg);
+  }
+  70% {
+    transform: translate3d(-5px, -6px, 0) scale(0.98) rotate(2deg);
+  }
+}
+
+@keyframes ambientWander {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(-2deg);
+  }
+  30% {
+    transform: translate3d(9px, -15px, 0) rotate(3.5deg);
+  }
+  60% {
+    transform: translate3d(-7px, -24px, 0) rotate(-3deg);
+  }
+  85% {
+    transform: translate3d(3px, -10px, 0) rotate(1.5deg);
+  }
+}
+
+@keyframes petalDrift {
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(5deg);
+  }
+  40% {
+    transform: translate3d(-9px, -16px, 0) rotate(-5deg);
+  }
+  80% {
+    transform: translate3d(7px, -20px, 0) rotate(2.5deg);
+  }
+}
+
 @keyframes floatStar {
-  0%,
-  100% {
-    transform: translateY(0) rotate(0deg);
+  0%, 100% {
+    transform: translate3d(0, 0, 0) rotate(-2deg);
   }
-  33% {
-    transform: translateY(-20px) rotate(120deg);
-  }
-  66% {
-    transform: translateY(10px) rotate(240deg);
+  50% {
+    transform: translate3d(3px, -10px, 0) rotate(3deg);
   }
 }
 @keyframes slideUp {
@@ -338,7 +399,28 @@
   animation: twinkle 3s ease-in-out infinite;
 }
 .animate-float-star {
-  animation: floatStar var(--animation-duration, 8s) ease-in-out infinite;
+  animation: floatStar var(--animation-duration, 10s) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform;
+}
+.animate-ambient-drift {
+  animation: ambientDrift var(--animation-duration, 12s) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform;
+}
+.animate-calm-sway {
+  animation: calmSway var(--animation-duration, 14s) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform;
+}
+.animate-soft-float {
+  animation: softFloat var(--animation-duration, 11s) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform;
+}
+.animate-ambient-wander {
+  animation: ambientWander var(--animation-duration, 16s) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform;
+}
+.animate-petal-drift {
+  animation: petalDrift var(--animation-duration, 13s) cubic-bezier(0.45, 0.05, 0.55, 0.95) infinite;
+  will-change: transform;
 }
 .animate-slide-up {
   animation: slideUp 0.4s ease-out forwards;
@@ -468,4 +550,22 @@
 }
 .animate-pulse-glow {
   animation: pulseGlow 4s linear infinite;
+}
+
+/* ── Print / Keepsake Export Styles ── */
+@media print {
+  @page {
+    margin: 1.2cm;
+    size: auto;
+  }
+  body {
+    background: white !important;
+    color: #1a1a1a !important;
+  }
+  .no-print {
+    display: none !important;
+  }
+  .theme-text {
+    color: #1a1a1a !important;
+  }
 }

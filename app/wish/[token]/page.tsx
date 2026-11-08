@@ -11,11 +11,25 @@ export async function generateMetadata({
   const { token } = await params;
   const event = await getWishFormData(token);
   if (!event) return { title: "Not Found" };
+
+  const title = `Secret Birthday Wish for ${event.personName} 🎂 — BirthdayDrop`;
+  const description =
+    event.teaserMessage ||
+    `We're secretly collecting birthday wishes and memories for ${event.personName}'s birthday! Add yours before the surprise reveal.`;
+
   return {
-    title: `Leave a wish for ${event.personName} 🎂 — BirthdayDrop`,
-    description:
-      event.teaserMessage ||
-      `Submit your birthday wish for ${event.personName}!`,
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
@@ -36,11 +50,15 @@ export default async function WishPage({
     <WishForm
       token={token}
       personName={event.personName}
+      personPhotoUrl={event.personPhotoUrl}
       birthDate={event.birthDate}
+      celebrationType={event.celebrationType}
+      customHeading={event.customHeading}
       teaserMessage={event.teaserMessage}
       allowAnonymous={event.allowAnonymous}
       wishCount={event._count.wishes}
       isExpired={isExpired}
+      wishDeadline={event.wishDeadline ? event.wishDeadline.toISOString() : null}
     />
   );
 }

@@ -9,6 +9,10 @@ export const step0Schema = z.object({
     .string()
     .min(1, "Please enter a birthday date")
     .max(60, "Too long"),
+  celebrationType: z
+    .enum(["family", "friends", "workplace", "other"])
+    .default("family"),
+  customHeading: z.string().max(80, "Heading too long").optional(),
 });
 
 export const step3Schema = z

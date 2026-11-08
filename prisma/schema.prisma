@@ -16,6 +16,9 @@ model Event {
   wishToken        String    @unique @default(uuid())
   surpriseToken    String    @unique @default(uuid())
   theme            String    @default("confetti")
+  celebrationType  String    @default("family")
+  customHeading    String?
+  flipCards        Boolean   @default(false)
   audioConfig      Json      @default("{\"loop\":true,\"volume\":0.7,\"autoplay\":false}")
   wishDeadline     DateTime?
   adminPasswordHash String
@@ -34,6 +37,8 @@ model Wish {
   wisherName  String   @default("Anonymous")
   message     String
   reactions   Json     @default("{}")
+  isHidden    Boolean  @default(false)
+  isFeatured  Boolean  @default(false)
   submittedAt DateTime @default(now())
 
   event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)

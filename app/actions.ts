@@ -12,6 +12,9 @@ export interface CreateEventInput {
   personPhotoUrl?: string;
   birthDate: string;
   theme: string;
+  celebrationType?: string;
+  customHeading?: string;
+  flipCards?: boolean;
   audioConfig: {
     selectedTrackId?: string;
     loop: boolean;
@@ -75,6 +78,9 @@ export async function createEvent(
         wishToken,
         surpriseToken,
         theme: input.theme,
+        celebrationType: input.celebrationType || "family",
+        customHeading: input.customHeading || null,
+        flipCards: input.flipCards ?? true,
         audioConfig: input.audioConfig,
         adminPasswordHash,
         wishDeadline: input.wishDeadline ? new Date(input.wishDeadline) : null,
@@ -151,6 +157,41 @@ export async function getAdminWishesPage(eventId: string, cursor: string) {
 export async function deleteWish(wishId: string) {
   await db.wish.delete({ where: { id: wishId } });
   revalidatePath("/admin/[eventId]");
+  revalidatePath("/surprise/[token]");
+}
+
+export async function toggleWishVisibility(wishId: string, isHidden: boolean) {
+  try {
+    await db.wish.update({
+      where: { id: wishId },
+      data: { isHidden },
+    });
+  } catch (_) {
+    await db.$executeRawUnsafe(
+      `UPDATE "Wish" SET "isHidden" = $1 WHERE "id" = $2`,
+      isHidden,
+      wishId,
+    );
+  }
+  revalidatePath("/admin/[eventId]");
+  revalidatePath("/surprise/[token]");
+}
+
+export async function toggleWishFeatured(wishId: string, isFeatured: boolean) {
+  try {
+    await db.wish.update({
+      where: { id: wishId },
+      data: { isFeatured },
+    });
+  } catch (_) {
+    await db.$executeRawUnsafe(
+      `UPDATE "Wish" SET "isFeatured" = $1 WHERE "id" = $2`,
+      isFeatured,
+      wishId,
+    );
+  }
+  revalidatePath("/admin/[eventId]");
+  revalidatePath("/surprise/[token]");
 }
 
 export async function updateEvent(
@@ -159,6 +200,9 @@ export async function updateEvent(
     personName: string;
     birthDate: string;
     theme: string;
+    celebrationType: string;
+    customHeading: string | null;
+    flipCards: boolean;
     wishDeadline: string | null;
     allowAnonymous: boolean;
     teaserMessage: string;
@@ -172,6 +216,9 @@ export async function updateEvent(
         ...(data.personName !== undefined && { personName: data.personName }),
         ...(data.birthDate !== undefined && { birthDate: data.birthDate }),
         ...(data.theme !== undefined && { theme: data.theme }),
+        ...(data.celebrationType !== undefined && { celebrationType: data.celebrationType }),
+        ...(data.customHeading !== undefined && { customHeading: data.customHeading }),
+        ...(data.flipCards !== undefined && { flipCards: data.flipCards }),
         ...(data.wishDeadline !== undefined && {
           wishDeadline: data.wishDeadline ? new Date(data.wishDeadline) : null,
         }),

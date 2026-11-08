@@ -3,7 +3,10 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
+  version: number | undefined;
 };
+
+const DB_CLIENT_VERSION = 2;
 
 function createPrismaClient() {
   const adapter = new PrismaPg({
@@ -15,6 +18,9 @@ function createPrismaClient() {
   });
 }
 
-export const db = globalForPrisma.prisma ?? createPrismaClient();
+if (!globalForPrisma.prisma || globalForPrisma.version !== DB_CLIENT_VERSION) {
+  globalForPrisma.prisma = createPrismaClient();
+  globalForPrisma.version = DB_CLIENT_VERSION;
+}
 
-if (process.env.NODE_ENV !== "production") globalForPrisma.prisma = db;
+export const db = globalForPrisma.prisma;
