@@ -15,14 +15,23 @@ export default async function Image({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const event = await db.event.findUnique({
-    where: { surpriseToken: token },
-    select: {
-      personName: true,
-      personPhotoUrl: true,
-      birthDate: true,
-    },
-  });
+  let event: {
+    personName: string;
+    personPhotoUrl: string | null;
+    birthDate: string;
+  } | null = null;
+  try {
+    event = await db.event.findUnique({
+      where: { surpriseToken: token },
+      select: {
+        personName: true,
+        personPhotoUrl: true,
+        birthDate: true,
+      },
+    });
+  } catch {
+    // Fallback to generic BirthdayDrop card if DB is temporarily unavailable
+  }
 
   const personName = event?.personName || "Birthday Star";
   const birthDate = event?.birthDate || "";

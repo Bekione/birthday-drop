@@ -13,6 +13,7 @@ import {
   Info,
   CalendarHeart,
   Sparkles,
+  AlertCircle,
 } from "lucide-react";
 
 interface WishFormProps {
@@ -472,18 +473,23 @@ export function WishForm({
     }
     setLoading(true);
     setError("");
-    const result = await submitWish(
-      token,
-      name.trim() || "Anonymous",
-      message.trim(),
-    );
-    if (result.success) {
-      setSubmitted(true);
-      setLiveCount((c) => c + 1);
-    } else {
-      setError(result.error ?? "Something went wrong.");
+    try {
+      const result = await submitWish(
+        token,
+        name.trim() || "Anonymous",
+        message.trim(),
+      );
+      if (result.success) {
+        setSubmitted(true);
+        setLiveCount((c) => c + 1);
+      } else {
+        setError(result.error ?? "Something went wrong.");
+      }
+    } catch {
+      setError("Unable to send your wish right now. Please check your connection and try again.");
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
   return (
@@ -600,8 +606,9 @@ export function WishForm({
             </div>
 
             {error && (
-              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-sm text-red-600 shadow-sm animate-fade-in-up">
-                {error}
+              <div className="flex items-start gap-2.5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-600 shadow-sm animate-fade-in-up">
+                <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-500" />
+                <span>{error}</span>
               </div>
             )}
 

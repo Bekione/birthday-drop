@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { BirthdayPageDynamic } from "@/components/birthday-page-dynamic";
 import { ThemeProvider } from "@/components/theme-provider";
+import { ServiceUnavailable } from "@/components/service-unavailable";
+import { safeErrorMessage } from "@/lib/errors";
 
 export async function generateMetadata({
   params,
@@ -10,27 +12,31 @@ export async function generateMetadata({
   params: Promise<{ token: string }>;
 }): Promise<Metadata> {
   const { token } = await params;
-  const event = await db.event.findUnique({
-    where: { surpriseToken: token },
-    select: { personName: true, personPhotoUrl: true },
-  });
-  if (!event) return { title: "Not Found" };
-  const title = `🎉 Happy Birthday, ${event.personName}! — BirthdayDrop`;
-  const description = `A special birthday surprise reveal for ${event.personName}!`;
-  return {
-    title,
-    description,
-    openGraph: {
+  try {
+    const event = await db.event.findUnique({
+      where: { surpriseToken: token },
+      select: { personName: true, personPhotoUrl: true },
+    });
+    if (!event) return { title: "Not Found" };
+    const title = `🎉 Happy Birthday, ${event.personName}! — BirthdayDrop`;
+    const description = `A special birthday surprise reveal for ${event.personName}!`;
+    return {
       title,
       description,
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-    },
-  };
+      openGraph: {
+        title,
+        description,
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+      },
+    };
+  } catch {
+    return { title: "Birthday Surprise — BirthdayDrop" };
+  }
 }
 
 export default async function SurprisePage({
@@ -39,13 +45,20 @@ export default async function SurprisePage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const event = await db.event.findUnique({
-    where: { surpriseToken: token },
-    include: {
-      wishes: { orderBy: { submittedAt: "asc" } },
-      audioTracks: { orderBy: { order: "asc" } },
-    },
-  });
+  let event: any = null;
+
+  try {
+    event = await db.event.findUnique({
+      where: { surpriseToken: token },
+      include: {
+        wishes: { orderBy: { submittedAt: "asc" } },
+        audioTracks: { orderBy: { order: "asc" } },
+      },
+    });
+  } catch (err) {
+    console.error("SurprisePage load error:", err);
+    return <ServiceUnavailable message={safeErrorMessage(err)} />;
+  }
 
   if (!event) notFound();
 

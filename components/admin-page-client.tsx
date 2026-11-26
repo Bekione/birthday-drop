@@ -41,13 +41,17 @@ import {
   Pause,
   Upload,
   PlusCircle,
+  AlertCircle,
 } from "lucide-react";
 
 interface AdminPageClientProps {
   eventId: string;
 }
 
-type EventData = Awaited<ReturnType<typeof getAdminEvent>>;
+type EventData = Extract<
+  Awaited<ReturnType<typeof getAdminEvent>>,
+  { ok: true }
+>["data"];
 
 const SESSION_KEY = (eventId: string) => `admin_authed_${eventId}`;
 
@@ -67,6 +71,8 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
   const [loading, setLoading] = useState(true); // checking sessionStorage
   const [password, setPassword] = useState("");
   const [authError, setAuthError] = useState("");
+  const [authIsSystemError, setAuthIsSystemError] = useState(false);
+  const [systemBanner, setSystemBanner] = useState("");
   const [authLoading, setAuthLoading] = useState(false);
   const [event, setEvent] = useState<EventData>(null);
   const [copied, setCopied] = useState<string | null>(null);
@@ -93,6 +99,8 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
   const [editCustomAudioFile, setEditCustomAudioFile] = useState<File | null>(
     null,
   );
+  const [adminAudioError, setAdminAudioError] = useState("");
+  const [adminSaveError, setAdminSaveError] = useState("");
   const [previewingTrackId, setPreviewingTrackId] = useState<string | null>(
     null,
   );
@@ -129,7 +137,12 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
           return;
         }
         getAdminWishesPage(eventId, cursor)
-          .then((newWishes) => {
+          .then((res) => {
+            if (!res.ok) {
+              setSystemBanner(res.error);
+              return;
+            }
+            const newWishes = res.data;
             if (newWishes.length < 15) setHasMore(false);
             setWishList((prev) => {
               const existingIds = new Set(prev.map((w) => w.id));
@@ -148,41 +161,55 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     return () => observerRef.current?.disconnect();
   }, [loadingMore, hasMore, wishList, eventId]);
 
+  const applyLoadedEvent = (data: NonNullable<EventData>) => {
+    setEvent(data);
+    setWishList(data.wishes);
+    setHasMore(data.wishes.length === 15);
+    setLastRefreshed(new Date());
+    setEditName(data.personName);
+    setEditDate(data.birthDate);
+    setEditTheme((data.theme as ThemeId) ?? "confetti");
+    setEditCelebrationType(data.celebrationType ?? "family");
+    setEditCustomHeading(data.customHeading ?? "");
+    setEditFlipCards(data.flipCards ?? false);
+    setEditDeadline(
+      data.wishDeadline
+        ? new Date(data.wishDeadline).toISOString().slice(0, 16)
+        : "",
+    );
+    setEditTeaser(data.teaserMessage ?? "");
+    setEditAllowAnon(data.allowAnonymous ?? true);
+    if (data.audioConfig && typeof data.audioConfig === "object") {
+      const ac = data.audioConfig as any;
+      setEditSelectedTrackId(ac.selectedTrackId ?? "");
+      setEditAudioLoop(ac.loop ?? true);
+      setEditAudioAutoplay(ac.autoplay ?? true);
+    }
+  };
+
   // Restore auth from sessionStorage on mount
   useEffect(() => {
     const wasAuthed = sessionStorage.getItem(SESSION_KEY(eventId));
     if (wasAuthed === "1") {
-      getAdminEvent(eventId).then((data) => {
-        if (data) {
-          setEvent(data);
-          setWishList(data.wishes);
-          setHasMore(data.wishes.length === 15);
-          setLastRefreshed(new Date());
-          setEditName(data.personName);
-          setEditDate(data.birthDate);
-          setEditTheme((data.theme as ThemeId) ?? "confetti");
-          setEditCelebrationType(data.celebrationType ?? "family");
-          setEditCustomHeading(data.customHeading ?? "");
-          setEditFlipCards(data.flipCards ?? false);
-          setEditDeadline(
-            data.wishDeadline
-              ? new Date(data.wishDeadline).toISOString().slice(0, 16)
-              : "",
-          );
-          setEditTeaser(data.teaserMessage ?? "");
-
-          setEditAllowAnon(data.allowAnonymous ?? true);
-          if (data.audioConfig && typeof data.audioConfig === "object") {
-            const ac = data.audioConfig as any;
-            setEditSelectedTrackId(ac.selectedTrackId ?? "");
-            setEditAudioLoop(ac.loop ?? true);
-            setEditAudioAutoplay(ac.autoplay ?? true);
+      getAdminEvent(eventId)
+        .then((res) => {
+          if (res.ok && res.data) {
+            applyLoadedEvent(res.data);
+            setAuthed(true);
+          } else if (!res.ok) {
+            setAuthError(res.error);
+            setAuthIsSystemError(res.isSystemError);
           }
-
-          setAuthed(true);
-        }
-        setLoading(false);
-      });
+        })
+        .catch(() => {
+          setAuthError(
+            "Unable to reach the server right now. Please try again in a moment."
+          );
+          setAuthIsSystemError(true);
+        })
+        .finally(() => {
+          setLoading(false);
+        });
     } else {
       setLoading(false);
     }
@@ -192,16 +219,26 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
   useEffect(() => {
     if (!authed) return;
     const poll = setInterval(async () => {
-      const data = await getAdminEvent(eventId);
-      if (data) {
-        setEvent(data);
-        setWishList((prev) => {
-          // Merge newly fetched wishes safely at the top without touching hasMore
-          const newIds = new Set(data.wishes.map((w: any) => w.id));
-          const existingSafe = prev.filter((w) => !newIds.has(w.id));
-          return [...data.wishes, ...existingSafe];
-        });
-        setLastRefreshed(new Date());
+      try {
+        const res = await getAdminEvent(eventId);
+        if (res.ok && res.data) {
+          const data = res.data;
+          setSystemBanner("");
+          setEvent(data);
+          setWishList((prev) => {
+            // Merge newly fetched wishes safely at the top without touching hasMore
+            const newIds = new Set(data.wishes.map((w: any) => w.id));
+            const existingSafe = prev.filter((w) => !newIds.has(w.id));
+            return [...data.wishes, ...existingSafe];
+          });
+          setLastRefreshed(new Date());
+        } else if (!res.ok) {
+          setSystemBanner(res.error);
+        }
+      } catch {
+        setSystemBanner(
+          "Connection interrupted while syncing wishes. Retrying automatically..."
+        );
       }
     }, 6_000);
     return () => clearInterval(poll);
@@ -209,53 +246,62 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
 
   const handleManualRefresh = async () => {
     setRefreshing(true);
-    const data = await getAdminEvent(eventId);
-    if (data) {
-      setEvent(data);
-      setWishList(data.wishes);
-      setHasMore(data.wishes.length === 15);
-      setLastRefreshed(new Date());
+    try {
+      const res = await getAdminEvent(eventId);
+      if (res.ok && res.data) {
+        const data = res.data;
+        setSystemBanner("");
+        setEvent(data);
+        setWishList(data.wishes);
+        setHasMore(data.wishes.length === 15);
+        setLastRefreshed(new Date());
+      } else if (!res.ok) {
+        setSystemBanner(res.error);
+      }
+    } catch {
+      setSystemBanner("Unable to refresh wishes right now. Please try again.");
+    } finally {
+      setRefreshing(false);
     }
-    setRefreshing(false);
   };
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthLoading(true);
     setAuthError("");
-    const ok = await verifyAdminPassword(eventId, password);
-    if (ok) {
-      sessionStorage.setItem(SESSION_KEY(eventId), "1");
-      const data = await getAdminEvent(eventId);
-      setEvent(data);
-      setWishList(data?.wishes ?? []);
-      setHasMore((data?.wishes?.length ?? 0) === 15);
-      setEditName(data?.personName ?? "");
-      setEditDate(data?.birthDate ?? "");
-      setEditTheme((data?.theme as ThemeId) ?? "confetti");
-      setEditCelebrationType(data?.celebrationType ?? "family");
-      setEditCustomHeading(data?.customHeading ?? "");
-      setEditFlipCards(data?.flipCards ?? false);
-      setEditDeadline(
-        data?.wishDeadline
-          ? new Date(data.wishDeadline).toISOString().slice(0, 16)
-          : "",
-      );
-      setEditTeaser(data?.teaserMessage ?? "");
-
-      setEditAllowAnon(data?.allowAnonymous ?? true);
-      if (data?.audioConfig && typeof data.audioConfig === "object") {
-        const ac = data.audioConfig as any;
-        setEditSelectedTrackId(ac.selectedTrackId ?? "");
-        setEditAudioLoop(ac.loop ?? true);
-        setEditAudioAutoplay(ac.autoplay ?? true);
+    setAuthIsSystemError(false);
+    try {
+      const authRes = await verifyAdminPassword(eventId, password);
+      if (!authRes.ok) {
+        setAuthError(authRes.error);
+        setAuthIsSystemError(Boolean(authRes.isSystemError));
+        return;
       }
 
+      const eventRes = await getAdminEvent(eventId);
+      if (!eventRes.ok) {
+        setAuthError(eventRes.error);
+        setAuthIsSystemError(eventRes.isSystemError);
+        return;
+      }
+
+      if (!eventRes.data) {
+        setAuthError("Event not found. Please check your admin link.");
+        setAuthIsSystemError(false);
+        return;
+      }
+
+      sessionStorage.setItem(SESSION_KEY(eventId), "1");
+      applyLoadedEvent(eventRes.data);
       setAuthed(true);
-    } else {
-      setAuthError("Incorrect password. Try again.");
+    } catch {
+      setAuthError(
+        "Unable to reach the server right now. Please check your connection and try again."
+      );
+      setAuthIsSystemError(true);
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   };
 
   const handleDelete = async (wishId: string) => {
@@ -269,21 +315,31 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
     }
     setConfirmDeleteId(null);
     setDeleteLoading(wishId);
-    await deleteWish(wishId);
-    setWishList((prev: NonNullable<EventData>["wishes"]) =>
-      prev.filter((w: { id: string }) => w.id !== wishId),
-    );
-    setEvent((prev) =>
-      prev
-        ? {
-            ...prev,
-            _count: {
-              wishes: Math.max(0, (prev._count?.wishes ?? 1) - 1),
-            },
-          }
-        : prev,
-    );
-    setDeleteLoading(null);
+    try {
+      const res = await deleteWish(wishId);
+      if (!res.ok) {
+        setSystemBanner(res.error);
+        return;
+      }
+      setSystemBanner("");
+      setWishList((prev: NonNullable<EventData>["wishes"]) =>
+        prev.filter((w: { id: string }) => w.id !== wishId),
+      );
+      setEvent((prev) =>
+        prev
+          ? {
+              ...prev,
+              _count: {
+                wishes: Math.max(0, (prev._count?.wishes ?? 1) - 1),
+              },
+            }
+          : prev,
+      );
+    } catch {
+      setSystemBanner("Failed to delete wish. Please try again.");
+    } finally {
+      setDeleteLoading(null);
+    }
   };
 
   const handleToggleVisibility = async (
@@ -295,7 +351,26 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         w.id === wishId ? { ...w, isHidden: !currentHidden } : w,
       ),
     );
-    await toggleWishVisibility(wishId, !currentHidden);
+    try {
+      const res = await toggleWishVisibility(wishId, !currentHidden);
+      if (!res.ok) {
+        setWishList((prev: any) =>
+          prev.map((w: any) =>
+            w.id === wishId ? { ...w, isHidden: currentHidden } : w,
+          ),
+        );
+        setSystemBanner(res.error);
+      } else {
+        setSystemBanner("");
+      }
+    } catch {
+      setWishList((prev: any) =>
+        prev.map((w: any) =>
+          w.id === wishId ? { ...w, isHidden: currentHidden } : w,
+        ),
+      );
+      setSystemBanner("Failed to update wish visibility. Please try again.");
+    }
   };
 
   const handleToggleFeatured = async (
@@ -307,11 +382,31 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         w.id === wishId ? { ...w, isFeatured: !currentFeatured } : w,
       ),
     );
-    await toggleWishFeatured(wishId, !currentFeatured);
+    try {
+      const res = await toggleWishFeatured(wishId, !currentFeatured);
+      if (!res.ok) {
+        setWishList((prev: any) =>
+          prev.map((w: any) =>
+            w.id === wishId ? { ...w, isFeatured: currentFeatured } : w,
+          ),
+        );
+        setSystemBanner(res.error);
+      } else {
+        setSystemBanner("");
+      }
+    } catch {
+      setWishList((prev: any) =>
+        prev.map((w: any) =>
+          w.id === wishId ? { ...w, isFeatured: currentFeatured } : w,
+        ),
+      );
+      setSystemBanner("Failed to update featured status. Please try again.");
+    }
   };
 
   const handleSave = async () => {
     setSaving(true);
+    setAdminSaveError("");
     try {
       let customUrl = undefined;
       let customTitle = undefined;
@@ -323,25 +418,59 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
         formData.append("type", "audio");
         const deviceId =
           localStorage.getItem("birthday_device_id") || "admin-edit";
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-          headers: {
-            "X-Device-Id": deviceId,
-          },
-        });
-        if (!res.ok) {
-          const errData = await res.json();
-          throw new Error(errData.error || "Failed to upload audio.");
+
+        let res: Response;
+        try {
+          res = await fetch("/api/upload", {
+            method: "POST",
+            body: formData,
+            headers: {
+              "X-Device-Id": deviceId,
+            },
+          });
+        } catch (netErr: any) {
+          throw new Error(
+            `Network error uploading audio: ${netErr?.message || "Please check your internet connection."}`
+          );
         }
-        const data = await res.json();
+
+        if (res.status === 413) {
+          throw new Error(
+            "Audio file exceeds the 4MB upload limit. Please select a smaller file."
+          );
+        }
+
+        const text = await res.text();
+        let data: any = null;
+        try {
+          data = JSON.parse(text);
+        } catch {
+          if (!res.ok) {
+            if (
+              text.toLowerCase().includes("payload_too_large") ||
+              text.toLowerCase().includes("too large")
+            ) {
+              throw new Error(
+                "Audio file exceeds the 4MB upload limit. Please select a smaller file."
+              );
+            }
+            throw new Error(
+              `Upload failed (${res.status}): Server returned an error.`
+            );
+          }
+        }
+
+        if (!res.ok || !data?.url) {
+          throw new Error(data?.error || "Failed to upload audio.");
+        }
+
         customUrl = data.url;
         customTitle = editCustomAudioFile.name;
         // The actions.ts updateEvent right now doesn't easily create a NEW AudioTrack relation
         // without an expanded backend update, but we will pass it into the audioConfig at least so the player works.
       }
 
-      await updateEvent(eventId, {
+      const updateRes = await updateEvent(eventId, {
         personName: editName,
         birthDate: editDate,
         theme: editTheme,
@@ -361,6 +490,9 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
           }),
         },
       });
+      if (!updateRes.ok) {
+        throw new Error(updateRes.error);
+      }
       setEvent((prev: EventData) =>
         prev
           ? {
@@ -387,8 +519,11 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
       );
       setEditMode(false);
       setEditCustomAudioFile(null); // clear file after save
-    } catch (e: any) {
-      alert(e.message || "Failed to save settings.");
+      setAdminAudioError("");
+      setAdminSaveError("");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to save settings.";
+      setAdminSaveError(msg);
     } finally {
       setSaving(false);
     }
@@ -437,7 +572,30 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
               className="w-full rounded-xl border border-gray-200 px-4 py-3 text-gray-800 focus:outline-none focus:ring-2 focus:ring-purple-400"
               required
             />
-            {authError && <p className="text-sm text-red-500">{authError}</p>}
+            {authError && (
+              <div
+                className={`flex items-start gap-2.5 rounded-2xl border p-3 text-xs animate-fade-in-up ${
+                  authIsSystemError
+                    ? "bg-amber-50 border-amber-200 text-amber-800"
+                    : "bg-red-50 border-red-200 text-red-700"
+                }`}
+              >
+                <AlertCircle
+                  size={16}
+                  className={`shrink-0 mt-0.5 ${
+                    authIsSystemError ? "text-amber-600" : "text-red-500"
+                  }`}
+                />
+                <div>
+                  <p className="font-bold">
+                    {authIsSystemError
+                      ? "Service temporarily unavailable"
+                      : "Sign-in failed"}
+                  </p>
+                  <p className="mt-0.5 leading-relaxed">{authError}</p>
+                </div>
+              </div>
+            )}
             <button
               id="admin-login-btn"
               type="submit"
@@ -513,6 +671,28 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
       </div>
 
       <div className="mx-auto max-w-5xl px-4 md:px-8 flex flex-col gap-6">
+        {systemBanner && (
+          <div className="flex items-start justify-between gap-3 rounded-2xl bg-amber-50 border border-amber-200 px-4 py-3 text-xs text-amber-900 shadow-sm animate-fade-in-up">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle
+                size={16}
+                className="shrink-0 mt-0.5 text-amber-600"
+              />
+              <div>
+                <p className="font-bold">Connection issue</p>
+                <p className="mt-0.5 text-amber-800">{systemBanner}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSystemBanner("")}
+              className="text-amber-700 hover:text-amber-900 p-1"
+              title="Dismiss"
+            >
+              <X size={14} />
+            </button>
+          </div>
+        )}
         {/* Main Dashboard Hero Card */}
         <div className="relative overflow-hidden rounded-[2.5rem] bg-gradient-to-b from-purple-100 via-purple-50/50 to-white p-8 shadow-sm border border-purple-100/50 flex flex-col items-center text-center">
           {/* Subtle background blur blobs */}
@@ -821,6 +1001,8 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                       onClick={() => {
                         setEditSelectedTrackId(t.id);
                         setEditCustomAudioFile(null);
+                        setAdminAudioError("");
+                        setAdminSaveError("");
                       }}
                       className={`w-full flex items-center gap-3 rounded-2xl border-2 px-3 py-2 cursor-pointer transition-all ${
                         isSelected
@@ -861,40 +1043,94 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                 })}
 
                 {/* Custom Upload */}
-                <label
-                  className={`w-full flex items-center gap-3 rounded-2xl border-2 px-3 py-2 cursor-pointer transition-all ${
-                    editCustomAudioFile
-                      ? "border-purple-500 bg-purple-50"
-                      : "border-dashed border-gray-200 hover:border-purple-200"
-                  }`}
-                >
-                  <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 shrink-0">
-                    <Upload size={14} className="text-purple-600" />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-semibold text-gray-800 text-xs truncate max-w-[180px]">
-                      {editCustomAudioFile?.name ?? "Upload your own..."}
-                    </p>
-                    <p className="text-[10px] text-gray-400">
-                      MP3/WAV, max 10MB
-                    </p>
-                  </div>
-                  {editCustomAudioFile && (
-                    <span className="text-purple-600 font-bold mx-2">✓</span>
-                  )}
-                  <input
-                    type="file"
-                    accept="audio/mp3,audio/mpeg,audio/wav"
-                    className="hidden"
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
+                <div>
+                  <label
+                    className={`w-full flex items-center gap-3 rounded-2xl border-2 px-3 py-2 cursor-pointer transition-all ${
+                      editCustomAudioFile
+                        ? "border-purple-500 bg-purple-50"
+                        : "border-dashed border-gray-200 hover:border-purple-200"
+                    }`}
+                  >
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 shrink-0">
+                      <Upload size={14} className="text-purple-600" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-gray-800 text-xs truncate max-w-[180px]">
+                        {editCustomAudioFile?.name ?? "Upload your own..."}
+                      </p>
+                      <p className="text-[10px] text-gray-400">
+                        MP3/WAV, max 4MB
+                      </p>
+                    </div>
+                    {editCustomAudioFile && (
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <span className="text-purple-600 font-bold">✓</span>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setEditCustomAudioFile(null);
+                            setAdminAudioError("");
+                          }}
+                          className="bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-1 transition-colors"
+                          title="Remove song"
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
+                    )}
+                    <input
+                      type="file"
+                      accept="audio/mp3,audio/mpeg,audio/wav,.mp3,.wav"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        e.target.value = "";
+                        if (!file) return;
+                        setAdminAudioError("");
+                        setAdminSaveError("");
+                        const dotIdx = file.name.lastIndexOf(".");
+                        const ext =
+                          dotIdx >= 0
+                            ? file.name.slice(dotIdx).toLowerCase()
+                            : "";
+                        const validMimes = [
+                          "audio/mpeg",
+                          "audio/mp3",
+                          "audio/x-mp3",
+                          "audio/wav",
+                          "audio/x-wav",
+                          "audio/wave",
+                        ];
+                        const validExts = [".mp3", ".wav"];
+                        if (
+                          !validMimes.includes(file.type) &&
+                          !validExts.includes(ext)
+                        ) {
+                          setAdminAudioError(
+                            "Unsupported audio format. Please select an MP3 or WAV file."
+                          );
+                          return;
+                        }
+                        if (file.size > 4.2 * 1024 * 1024) {
+                          setAdminAudioError(
+                            `Audio file is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is 4MB.`
+                          );
+                          return;
+                        }
                         setEditCustomAudioFile(file);
                         setEditSelectedTrackId("");
-                      }
-                    }}
-                  />
-                </label>
+                      }}
+                    />
+                  </label>
+                  {adminAudioError && (
+                    <div className="mt-2 flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 p-2 text-xs text-red-600 animate-fade-in-up">
+                      <AlertCircle size={14} className="shrink-0 mt-0.5 text-red-500" />
+                      <span className="font-medium">{adminAudioError}</span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Loop / Autoplay subsettings */}
@@ -955,6 +1191,15 @@ export function AdminPageClient({ eventId }: AdminPageClientProps) {
                 </button>
               </div>
             </div>
+            {adminSaveError && (
+              <div className="flex items-start gap-2.5 rounded-2xl bg-red-50 border border-red-200 p-3 text-xs text-red-700 animate-fade-in-up">
+                <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
+                <div>
+                  <p className="font-bold text-red-800">Failed to save changes</p>
+                  <p className="mt-0.5 text-red-600">{adminSaveError}</p>
+                </div>
+              </div>
+            )}
             <div className="flex justify-end pt-2">
               <button
                 onClick={handleSave}

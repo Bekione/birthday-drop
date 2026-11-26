@@ -6,6 +6,7 @@ import bcrypt from "bcryptjs";
 import { generateToken } from "@/lib/tokens";
 import { DEFAULT_AUDIO_TRACKS } from "@/lib/themes";
 import { revalidatePath } from "next/cache";
+import { getSafeErrorInfo } from "@/lib/errors";
 
 export interface CreateEventInput {
   personName: string;
@@ -29,42 +30,15 @@ export interface CreateEventInput {
   teaserMessage?: string;
 }
 
-/** Normalise any server/DB error into a safe user-facing string. */
-function safeErrorMessage(err: unknown): string {
-  if (!(err instanceof Error)) return "Something went wrong. Please try again.";
-
-  const msg = err.message.toLowerCase();
-
-  // Network / DB unreachable
-  if (
-    msg.includes("can't reach") ||
-    msg.includes("connect") ||
-    msg.includes("econnrefused") ||
-    msg.includes("etimedout") ||
-    msg.includes("network") ||
-    msg.includes("fetch failed")
-  ) {
-    return "Unable to reach the server right now. Please check your connection and try again.";
-  }
-
-  // Prisma known-request errors (constraint violations, etc.)
-  if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    if (err.code === "P2002")
-      return "A surprise with those details already exists.";
-    return "Database error. Please try again.";
-  }
-
-  // Prisma initialisation errors (bad URL, misconfiguration)
-  if (err instanceof Prisma.PrismaClientInitializationError) {
-    return "Service is temporarily unavailable. Please try again shortly.";
-  }
-
-  return "Something went wrong. Please try again.";
-}
+export type ActionResult<T = undefined> =
+  | (T extends undefined ? { ok: true } : { ok: true } & T)
+  | { ok: false; error: string; isSystemError?: boolean };
 
 export async function createEvent(
   input: CreateEventInput,
-): Promise<{ eventId: string; wishToken: string; surpriseToken: string }> {
+): Promise<
+  ActionResult<{ eventId: string; wishToken: string; surpriseToken: string }>
+> {
   try {
     const adminPasswordHash = await bcrypt.hash(input.adminPassword, 10);
     const wishToken = generateToken();
@@ -116,82 +90,173 @@ export async function createEvent(
 
     await db.audioTrack.createMany({ data: tracksToCreate });
 
-    return { eventId: event.id, wishToken, surpriseToken };
+    return { ok: true, eventId: event.id, wishToken, surpriseToken };
   } catch (err) {
-    // Re-throw a safe, user-facing error — never expose internals
-    throw new Error(safeErrorMessage(err));
+    console.error("createEvent error:", err);
+    const info = getSafeErrorInfo(err);
+    return {
+      ok: false,
+      error: info.message,
+      isSystemError: info.isSystemError,
+    };
   }
 }
 
-export async function verifyAdminPassword(eventId: string, password: string) {
+export async function verifyAdminPassword(
+  eventId: string,
+  password: string,
+): Promise<ActionResult> {
   try {
     const event = await db.event.findUnique({ where: { id: eventId } });
-    if (!event) return false;
-    return bcrypt.compare(password, event.adminPasswordHash);
-  } catch {
-    return false;
+    if (!event) {
+      return {
+        ok: false,
+        error: "Event not found. Please check your admin link.",
+        isSystemError: false,
+      };
+    }
+
+    const matches = await bcrypt.compare(password, event.adminPasswordHash);
+    if (!matches) {
+      return {
+        ok: false,
+        error: "Incorrect password. Try again.",
+        isSystemError: false,
+      };
+    }
+
+    return { ok: true };
+  } catch (err) {
+    console.error("verifyAdminPassword error:", err);
+    const info = getSafeErrorInfo(err);
+    return {
+      ok: false,
+      error: info.message,
+      isSystemError: info.isSystemError,
+    };
   }
 }
 
 export async function getAdminEvent(eventId: string) {
-  return db.event.findUnique({
-    where: { id: eventId },
-    include: {
-      wishes: { orderBy: { submittedAt: "desc" }, take: 15 },
-      audioTracks: { orderBy: { order: "asc" } },
-      _count: { select: { wishes: true } },
-    },
-  });
+  try {
+    const data = await db.event.findUnique({
+      where: { id: eventId },
+      include: {
+        wishes: { orderBy: { submittedAt: "desc" }, take: 15 },
+        audioTracks: { orderBy: { order: "asc" } },
+        _count: { select: { wishes: true } },
+      },
+    });
+    return { ok: true as const, data };
+  } catch (err) {
+    console.error("getAdminEvent error:", err);
+    const info = getSafeErrorInfo(err);
+    return {
+      ok: false as const,
+      error: info.message,
+      isSystemError: info.isSystemError,
+    };
+  }
 }
 
 export async function getAdminWishesPage(eventId: string, cursor: string) {
-  return db.wish.findMany({
-    where: { eventId },
-    orderBy: { submittedAt: "desc" },
-    take: 15,
-    skip: 1,
-    cursor: { id: cursor },
-  });
-}
-
-export async function deleteWish(wishId: string) {
-  await db.wish.delete({ where: { id: wishId } });
-  revalidatePath("/admin/[eventId]");
-  revalidatePath("/surprise/[token]");
-}
-
-export async function toggleWishVisibility(wishId: string, isHidden: boolean) {
   try {
-    await db.wish.update({
-      where: { id: wishId },
-      data: { isHidden },
+    const data = await db.wish.findMany({
+      where: { eventId },
+      orderBy: { submittedAt: "desc" },
+      take: 15,
+      skip: 1,
+      cursor: { id: cursor },
     });
-  } catch (_) {
-    await db.$executeRawUnsafe(
-      `UPDATE "Wish" SET "isHidden" = $1 WHERE "id" = $2`,
-      isHidden,
-      wishId,
-    );
+    return { ok: true as const, data };
+  } catch (err) {
+    console.error("getAdminWishesPage error:", err);
+    const info = getSafeErrorInfo(err);
+    return {
+      ok: false as const,
+      error: info.message,
+      isSystemError: info.isSystemError,
+    };
   }
-  revalidatePath("/admin/[eventId]");
-  revalidatePath("/surprise/[token]");
 }
 
-export async function toggleWishFeatured(wishId: string, isFeatured: boolean) {
+export async function deleteWish(wishId: string): Promise<ActionResult> {
   try {
-    await db.wish.update({
-      where: { id: wishId },
-      data: { isFeatured },
-    });
-  } catch (_) {
-    await db.$executeRawUnsafe(
-      `UPDATE "Wish" SET "isFeatured" = $1 WHERE "id" = $2`,
-      isFeatured,
-      wishId,
-    );
+    await db.wish.delete({ where: { id: wishId } });
+    revalidatePath("/admin/[eventId]");
+    revalidatePath("/surprise/[token]");
+    return { ok: true };
+  } catch (err) {
+    console.error("deleteWish error:", err);
+    const info = getSafeErrorInfo(err);
+    return {
+      ok: false,
+      error: info.message,
+      isSystemError: info.isSystemError,
+    };
   }
-  revalidatePath("/admin/[eventId]");
-  revalidatePath("/surprise/[token]");
+}
+
+export async function toggleWishVisibility(
+  wishId: string,
+  isHidden: boolean,
+): Promise<ActionResult> {
+  try {
+    try {
+      await db.wish.update({
+        where: { id: wishId },
+        data: { isHidden },
+      });
+    } catch (_) {
+      await db.$executeRawUnsafe(
+        `UPDATE "Wish" SET "isHidden" = $1 WHERE "id" = $2`,
+        isHidden,
+        wishId,
+      );
+    }
+    revalidatePath("/admin/[eventId]");
+    revalidatePath("/surprise/[token]");
+    return { ok: true };
+  } catch (err) {
+    console.error("toggleWishVisibility error:", err);
+    const info = getSafeErrorInfo(err);
+    return {
+      ok: false,
+      error: info.message,
+      isSystemError: info.isSystemError,
+    };
+  }
+}
+
+export async function toggleWishFeatured(
+  wishId: string,
+  isFeatured: boolean,
+): Promise<ActionResult> {
+  try {
+    try {
+      await db.wish.update({
+        where: { id: wishId },
+        data: { isFeatured },
+      });
+    } catch (_) {
+      await db.$executeRawUnsafe(
+        `UPDATE "Wish" SET "isFeatured" = $1 WHERE "id" = $2`,
+        isFeatured,
+        wishId,
+      );
+    }
+    revalidatePath("/admin/[eventId]");
+    revalidatePath("/surprise/[token]");
+    return { ok: true };
+  } catch (err) {
+    console.error("toggleWishFeatured error:", err);
+    const info = getSafeErrorInfo(err);
+    return {
+      ok: false,
+      error: info.message,
+      isSystemError: info.isSystemError,
+    };
+  }
 }
 
 export async function updateEvent(
@@ -208,7 +273,7 @@ export async function updateEvent(
     teaserMessage: string;
     audioConfig: Prisma.InputJsonValue;
   }>,
-) {
+): Promise<ActionResult> {
   try {
     await db.event.update({
       where: { id: eventId },
@@ -216,8 +281,12 @@ export async function updateEvent(
         ...(data.personName !== undefined && { personName: data.personName }),
         ...(data.birthDate !== undefined && { birthDate: data.birthDate }),
         ...(data.theme !== undefined && { theme: data.theme }),
-        ...(data.celebrationType !== undefined && { celebrationType: data.celebrationType }),
-        ...(data.customHeading !== undefined && { customHeading: data.customHeading }),
+        ...(data.celebrationType !== undefined && {
+          celebrationType: data.celebrationType,
+        }),
+        ...(data.customHeading !== undefined && {
+          customHeading: data.customHeading,
+        }),
         ...(data.flipCards !== undefined && { flipCards: data.flipCards }),
         ...(data.wishDeadline !== undefined && {
           wishDeadline: data.wishDeadline ? new Date(data.wishDeadline) : null,
@@ -234,7 +303,14 @@ export async function updateEvent(
       },
     });
     revalidatePath(`/admin/${eventId}`);
+    return { ok: true };
   } catch (err) {
-    throw new Error(safeErrorMessage(err));
+    console.error("updateEvent error:", err);
+    const info = getSafeErrorInfo(err);
+    return {
+      ok: false,
+      error: info.message,
+      isSystemError: info.isSystemError,
+    };
   }
 }

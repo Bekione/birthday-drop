@@ -21,6 +21,8 @@ import {
   Pause,
   Check,
   ShieldCheck,
+  X,
+  AlertCircle,
 } from "lucide-react";
 import { useWizardStore } from "@/lib/wizard-store";
 import { step0Schema, step3Schema } from "@/lib/wizard-schema";
@@ -91,6 +93,120 @@ const variants = {
   }),
 };
 
+const ALLOWED_IMAGE_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "image/avif",
+];
+const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"];
+const MAX_UPLOAD_SIZE = 4.2 * 1024 * 1024; // 4.2MB (Vercel serverless limit is 4.5MB)
+
+async function compressImageIfNeeded(file: File): Promise<File> {
+  // If file is under 2MB or is GIF, skip canvas compression
+  if (file.size <= 2 * 1024 * 1024 || file.type === "image/gif") {
+    return file;
+  }
+  return new Promise((resolve) => {
+    const img = new window.Image();
+    const url = URL.createObjectURL(file);
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const maxDim = 1200;
+      let width = img.width;
+      let height = img.height;
+      if (width > maxDim || height > maxDim) {
+        if (width > height) {
+          height = Math.round((height * maxDim) / width);
+          width = maxDim;
+        } else {
+          width = Math.round((width * maxDim) / height);
+          height = maxDim;
+        }
+      }
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return resolve(file);
+      ctx.drawImage(img, 0, 0, width, height);
+      canvas.toBlob(
+        (blob) => {
+          if (blob && blob.size < file.size) {
+            const compressed = new File(
+              [blob],
+              file.name.replace(/\.[^.]+$/, ".jpg"),
+              { type: "image/jpeg" }
+            );
+            resolve(compressed);
+          } else {
+            resolve(file);
+          }
+        },
+        "image/jpeg",
+        0.88
+      );
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    img.src = url;
+  });
+}
+
+async function safeUpload(
+  formData: FormData,
+  deviceId: string,
+  kind: "photo" | "audio"
+): Promise<string> {
+  let res: Response;
+  try {
+    res = await fetch("/api/upload", {
+      method: "POST",
+      headers: { "X-Device-Id": deviceId },
+      body: formData,
+    });
+  } catch (netErr: any) {
+    throw new Error(
+      `Network error uploading ${kind}: ${netErr?.message || "Please check your internet connection."}`
+    );
+  }
+
+  if (res.status === 413) {
+    throw new Error(
+      `${kind === "photo" ? "Photo" : "Audio file"} is too large for upload (server 4MB limit). Please select a smaller file.`
+    );
+  }
+
+  const text = await res.text();
+  let data: any = null;
+  try {
+    data = JSON.parse(text);
+  } catch {
+    if (!res.ok) {
+      if (
+        text.toLowerCase().includes("payload_too_large") ||
+        text.toLowerCase().includes("too large")
+      ) {
+        throw new Error(
+          `${kind === "photo" ? "Photo" : "Audio file"} exceeds the 4MB upload limit. Please select a smaller file.`
+        );
+      }
+      throw new Error(
+        `Upload failed (${res.status}): Server returned an unexpected error.`
+      );
+    }
+  }
+
+  if (!res.ok || !data?.url) {
+    throw new Error(data?.error || `Failed to upload ${kind}.`);
+  }
+
+  return data.url;
+}
+
 export function SetupWizard() {
   const router = useRouter();
 
@@ -111,6 +227,7 @@ export function SetupWizard() {
     audioLoop,
     audioVolume,
     audioAutoplay,
+    customAudioFile,
     adminPassword,
     confirmPassword,
     wishDeadline,
@@ -122,6 +239,9 @@ export function SetupWizard() {
   const [direction, setDirection] = useState(1);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [photoError, setPhotoError] = useState("");
+  const [audioError, setAudioError] = useState("");
+  const [optimizingPhoto, setOptimizingPhoto] = useState(false);
   const [copied, setCopied] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [result, setResult] = useState<{
@@ -177,15 +297,69 @@ export function SetupWizard() {
 
   const goTo = (next: number) => {
     if (next > step && !validateStep()) return;
+    setError("");
     setDirection(next > step ? 1 : -1);
     setStep(next);
   };
 
-  const handlePhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handlePhotoChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
+    e.target.value = "";
     if (!file) return;
-    setField("photoFile", file);
-    setField("photoPreview", URL.createObjectURL(file));
+    setPhotoError("");
+
+    const dotIdx = file.name.lastIndexOf(".");
+    const ext = dotIdx >= 0 ? file.name.slice(dotIdx).toLowerCase() : "";
+    const isMimeValid = ALLOWED_IMAGE_TYPES.includes(file.type);
+    const isExtValid = ALLOWED_IMAGE_EXTS.includes(ext);
+
+    if (!isMimeValid && !isExtValid) {
+      setPhotoError(
+        "Unsupported format. Please select a JPG, PNG, WebP, GIF, or AVIF image."
+      );
+      return;
+    }
+
+    try {
+      setOptimizingPhoto(true);
+      const processed = await compressImageIfNeeded(file);
+      setOptimizingPhoto(false);
+
+      if (processed.size > MAX_UPLOAD_SIZE) {
+        setPhotoError(
+          `Image is too large (${(processed.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is 4MB.`
+        );
+        return;
+      }
+
+      if (photoPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(photoPreview);
+      }
+      setField("photoFile", processed);
+      setField("photoPreview", URL.createObjectURL(processed));
+    } catch {
+      setOptimizingPhoto(false);
+      if (file.size > MAX_UPLOAD_SIZE) {
+        setPhotoError(
+          `Image is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is 4MB.`
+        );
+        return;
+      }
+      if (photoPreview?.startsWith("blob:")) {
+        URL.revokeObjectURL(photoPreview);
+      }
+      setField("photoFile", file);
+      setField("photoPreview", URL.createObjectURL(file));
+    }
+  };
+
+  const handleRemovePhoto = () => {
+    if (photoPreview?.startsWith("blob:")) {
+      URL.revokeObjectURL(photoPreview);
+    }
+    setField("photoFile", null);
+    setField("photoPreview", null);
+    setPhotoError("");
   };
 
   const handleSubmit = async () => {
@@ -204,14 +378,7 @@ export function SetupWizard() {
         const formData = new FormData();
         formData.append("file", photoFile);
         formData.append("type", "photo");
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "X-Device-Id": deviceId },
-          body: formData,
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Upload failed");
-        photoUrl = data.url;
+        photoUrl = await safeUpload(formData, deviceId, "photo");
       }
 
       const customAudioFile = useWizardStore.getState().customAudioFile;
@@ -219,14 +386,7 @@ export function SetupWizard() {
         const formData = new FormData();
         formData.append("file", customAudioFile);
         formData.append("type", "audio");
-        const res = await fetch("/api/upload", {
-          method: "POST",
-          headers: { "X-Device-Id": deviceId },
-          body: formData,
-        });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? "Audio upload failed");
-        customTrackUrl = data.url;
+        customTrackUrl = await safeUpload(formData, deviceId, "audio");
         customTrackTitle = customAudioFile.name.replace(/\.[^.]+$/, "");
       }
 
@@ -252,8 +412,17 @@ export function SetupWizard() {
         teaserMessage: teaserMessage || undefined,
       });
 
-      sessionStorage.setItem("wizard_result", JSON.stringify(res));
-      setResult(res);
+      if (!res.ok) {
+        throw new Error(res.error);
+      }
+
+      const payload = {
+        eventId: res.eventId,
+        wishToken: res.wishToken,
+        surpriseToken: res.surpriseToken,
+      };
+      sessionStorage.setItem("wizard_result", JSON.stringify(payload));
+      setResult(payload);
       setDirection(1);
       setStep(4);
     } catch (e: unknown) {
@@ -478,33 +647,61 @@ export function SetupWizard() {
 
                     {/* Photo upload */}
                     <div>
-                      <label className="block text-sm font-semibold text-gray-700 mb-1.5">
-                        Photo (optional)
-                      </label>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <label className="block text-sm font-semibold text-gray-700">
+                          Photo (optional)
+                        </label>
+                        <span className="text-[11px] text-gray-400">
+                          JPG, PNG, WebP, GIF, AVIF &bull; Max 4MB
+                        </span>
+                      </div>
                       <div className="flex items-center gap-4">
-                        {photoPreview && (
-                          <Image
-                            src={photoPreview}
-                            alt="Preview"
-                            width={64}
-                            height={64}
-                            className="h-16 w-16 rounded-full object-cover border-2 border-purple-300"
-                            unoptimized
-                          />
-                        )}
-                        <label className="cursor-pointer rounded-xl border-2 border-dashed border-purple-200 px-6 py-4 text-center text-sm text-purple-500 hover:border-purple-400 transition-colors flex-1 flex items-center justify-center gap-2">
+                        {photoPreview ? (
+                          <div className="relative group shrink-0">
+                            <Image
+                              src={photoPreview}
+                              alt="Preview"
+                              width={64}
+                              height={64}
+                              className="h-16 w-16 rounded-full object-cover border-2 border-purple-300 shadow-sm"
+                              unoptimized
+                            />
+                            <button
+                              type="button"
+                              onClick={handleRemovePhoto}
+                              className="absolute -top-1 -right-1 bg-red-500 hover:bg-red-600 text-white rounded-full p-1 shadow-md transition-transform hover:scale-110"
+                              title="Remove photo"
+                            >
+                              <X size={12} />
+                            </button>
+                          </div>
+                        ) : null}
+                        <label className="cursor-pointer rounded-xl border-2 border-dashed border-purple-200 px-6 py-4 text-center text-sm text-purple-500 hover:border-purple-400 hover:bg-purple-50/50 transition-colors flex-1 flex items-center justify-center gap-2">
                           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-purple-400 to-indigo-600 shadow">
                             <Camera size={24} className="text-white" />
                           </div>
-                          <span>Click to upload a photo</span>
+                          <span className="font-medium">
+                            {optimizingPhoto
+                              ? "Optimizing photo..."
+                              : photoPreview
+                                ? "Change photo"
+                                : "Click to upload a photo"}
+                          </span>
                           <input
                             type="file"
-                            accept="image/*"
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/avif,.jpg,.jpeg,.png,.webp,.gif,.avif"
                             className="hidden"
+                            disabled={optimizingPhoto}
                             onChange={handlePhotoChange}
                           />
                         </label>
                       </div>
+                      {photoError && (
+                        <div className="mt-2 flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-600 animate-fade-in-up">
+                          <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
+                          <span className="font-medium">{photoError}</span>
+                        </div>
+                      )}
                     </div>
                     {/* Teaser */}
                     <div>
@@ -732,6 +929,7 @@ export function SetupWizard() {
                           onClick={() => {
                             setField("selectedTrackId", t.id);
                             setField("customAudioFile", null);
+                            setAudioError("");
                           }}
                           className={`w-full flex items-center gap-3 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${
                             isSelected
@@ -774,41 +972,93 @@ export function SetupWizard() {
                       );
                     })}
                     {/* Custom upload */}
-                    <label
-                      className={`w-full flex items-center gap-4 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${
-                        useWizardStore.getState().customAudioFile
-                          ? "border-purple-500 bg-purple-50"
-                          : "border-dashed border-gray-200 hover:border-purple-200"
-                      }`}
-                    >
-                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100">
-                        <Upload size={18} className="text-purple-600" />
-                      </div>
-                      <div>
-                        <p className="font-semibold text-gray-800 text-sm">
-                          {useWizardStore.getState().customAudioFile?.name ??
-                            "Upload your own song"}
-                        </p>
-                        <p className="text-xs text-gray-400">
-                          MP3 or WAV, max 10MB
-                        </p>
-                      </div>
-                      {useWizardStore.getState().customAudioFile && (
-                        <span className="ml-auto text-purple-600">✓</span>
-                      )}
-                      <input
-                        type="file"
-                        accept="audio/mp3,audio/mpeg,audio/wav"
-                        className="hidden"
-                        onChange={(e) => {
-                          const file = e.target.files?.[0];
-                          if (file) {
+                    <div>
+                      <label
+                        className={`w-full flex items-center gap-4 rounded-xl border-2 px-4 py-3 cursor-pointer transition-all ${
+                          customAudioFile
+                            ? "border-purple-500 bg-purple-50"
+                            : "border-dashed border-gray-200 hover:border-purple-200"
+                        }`}
+                      >
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-100 shrink-0">
+                          <Upload size={18} className="text-purple-600" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-gray-800 text-sm truncate">
+                            {customAudioFile?.name ?? "Upload your own song"}
+                          </p>
+                          <p className="text-xs text-gray-400">
+                            MP3 or WAV, max 4MB
+                          </p>
+                        </div>
+                        {customAudioFile ? (
+                          <div className="flex items-center gap-2 shrink-0">
+                            <span className="text-purple-600 font-bold">✓</span>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setField("customAudioFile", null);
+                                setAudioError("");
+                              }}
+                              className="bg-red-100 hover:bg-red-200 text-red-600 rounded-full p-1 transition-colors"
+                              title="Remove song"
+                            >
+                              <X size={14} />
+                            </button>
+                          </div>
+                        ) : null}
+                        <input
+                          type="file"
+                          accept="audio/mp3,audio/mpeg,audio/wav,.mp3,.wav"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            e.target.value = "";
+                            if (!file) return;
+                            setAudioError("");
+                            const dotIdx = file.name.lastIndexOf(".");
+                            const ext =
+                              dotIdx >= 0
+                                ? file.name.slice(dotIdx).toLowerCase()
+                                : "";
+                            const validMimes = [
+                              "audio/mpeg",
+                              "audio/mp3",
+                              "audio/x-mp3",
+                              "audio/wav",
+                              "audio/x-wav",
+                              "audio/wave",
+                            ];
+                            const validExts = [".mp3", ".wav"];
+                            if (
+                              !validMimes.includes(file.type) &&
+                              !validExts.includes(ext)
+                            ) {
+                              setAudioError(
+                                "Unsupported audio format. Please choose an MP3 or WAV file."
+                              );
+                              return;
+                            }
+                            if (file.size > MAX_UPLOAD_SIZE) {
+                              setAudioError(
+                                `Audio file is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Maximum allowed size is 4MB.`
+                              );
+                              return;
+                            }
                             setField("customAudioFile", file);
                             setField("selectedTrackId", "");
-                          }
-                        }}
-                      />
-                    </label>
+                          }}
+                        />
+                      </label>
+                      {audioError && (
+                        <div className="mt-2 flex items-start gap-2 rounded-xl bg-red-50 border border-red-200 p-2.5 text-xs text-red-600 animate-fade-in-up">
+                          <AlertCircle size={16} className="shrink-0 mt-0.5 text-red-500" />
+                          <span className="font-medium">{audioError}</span>
+                        </div>
+                      )}
+                    </div>
                   </div>
 
                   <div className="space-y-4 rounded-xl bg-gray-50 p-4">
@@ -991,7 +1241,13 @@ export function SetupWizard() {
                   </div>
 
                   {error && (
-                    <p className="mt-4 text-sm text-red-500">{error}</p>
+                    <div className="mt-4 flex items-start gap-3 rounded-2xl bg-red-50 border border-red-200 p-3.5 text-sm text-red-700 animate-fade-in-up">
+                      <AlertCircle size={18} className="shrink-0 mt-0.5 text-red-500" />
+                      <div>
+                        <p className="font-semibold text-red-800">Surprise creation failed</p>
+                        <p className="mt-0.5 text-xs text-red-600 leading-relaxed">{error}</p>
+                      </div>
+                    </div>
                   )}
                 </div>
               )}
@@ -1119,10 +1375,11 @@ export function SetupWizard() {
                 <button
                   type="button"
                   id="next-step"
+                  disabled={optimizingPhoto}
                   onClick={() => goTo(step + 1)}
-                  className="rounded-full bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:scale-105 transition-all"
+                  className="rounded-full bg-gradient-to-r from-purple-600 to-purple-700 px-6 py-2.5 text-sm font-bold text-white shadow-md hover:scale-105 disabled:opacity-60 disabled:scale-100 transition-all"
                 >
-                  Next →
+                  {optimizingPhoto ? "Optimizing…" : "Next →"}
                 </button>
               ) : (
                 <button

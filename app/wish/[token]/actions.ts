@@ -2,7 +2,8 @@
 
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
-import { headers, cookies } from "next/headers";
+import { cookies } from "next/headers";
+import { safeErrorMessage } from "@/lib/errors";
 
 export async function getWishFormData(token: string) {
   return db.event.findUnique({
@@ -27,51 +28,56 @@ export async function submitWish(
   wisherName: string,
   message: string,
 ) {
-  const event = await db.event.findUnique({
-    where: { wishToken: token },
-    select: { id: true, wishDeadline: true, birthDate: true },
-  });
+  try {
+    const event = await db.event.findUnique({
+      where: { wishToken: token },
+      select: { id: true, wishDeadline: true, birthDate: true },
+    });
 
-  if (!event) return { success: false, error: "Event not found." };
+    if (!event) return { success: false, error: "Event not found." };
 
-  // First check specific deadline, fallback to birthDate
-  const isExpired = event.wishDeadline
-    ? new Date() > event.wishDeadline
-    : new Date() > new Date(event.birthDate);
+    // First check specific deadline, fallback to birthDate
+    const isExpired = event.wishDeadline
+      ? new Date() > event.wishDeadline
+      : new Date() > new Date(event.birthDate);
 
-  if (isExpired) {
-    return { success: false, error: "The wish form has closed." };
+    if (isExpired) {
+      return { success: false, error: "The wish form has closed." };
+    }
+
+    // Rate limiter using high-security cookies.
+    // People changing `wisherName` no longer bypasses this limit.
+    const cookieStore = await cookies();
+    const limitKey = `bd_wishes_${event.id}`;
+    const currentCount = parseInt(cookieStore.get(limitKey)?.value || "0", 10);
+
+    if (currentCount >= 3) {
+      return {
+        success: false,
+        error:
+          "You've reached the maximum number of wishes allowed from this device.",
+      };
+    }
+
+    await db.wish.create({
+      data: {
+        eventId: event.id,
+        wisherName: wisherName.trim() || "Anonymous",
+        message: message.trim(),
+      },
+    });
+
+    cookieStore.set(limitKey, (currentCount + 1).toString(), {
+      expires:
+        event.wishDeadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
+    });
+
+    revalidatePath(`/wish/${token}`);
+    return { success: true };
+  } catch (err) {
+    console.error("submitWish error:", err);
+    return { success: false, error: safeErrorMessage(err) };
   }
-
-  // Rate limitter using high-security cookies.
-  // People changing `wisherName` no longer bypasses this limit.
-  const cookieStore = await cookies();
-  const limitKey = `bd_wishes_${event.id}`;
-  const currentCount = parseInt(cookieStore.get(limitKey)?.value || "0", 10);
-
-  if (currentCount >= 3) {
-    return {
-      success: false,
-      error:
-        "You've reached the maximum number of wishes allowed from this device.",
-    };
-  }
-
-  await db.wish.create({
-    data: {
-      eventId: event.id,
-      wisherName: wisherName.trim() || "Anonymous",
-      message: message.trim(),
-    },
-  });
-
-  cookieStore.set(limitKey, (currentCount + 1).toString(), {
-    expires:
-      event.wishDeadline || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days
-  });
-
-  revalidatePath(`/wish/${token}`);
-  return { success: true };
 }
 
 export async function toggleReaction(
@@ -79,21 +85,28 @@ export async function toggleReaction(
   emoji: string,
   isAdding: boolean,
 ) {
-  const wish = await db.wish.findUnique({ where: { id: wishId } });
-  if (!wish) return { success: false, count: 0 };
+  try {
+    const wish = await db.wish.findUnique({ where: { id: wishId } });
+    if (!wish) return { success: false, count: 0 };
 
-  const reactions = (wish.reactions as Record<string, number>) ?? {};
-  const currentCount = reactions[emoji] ?? 0;
-  const newCount = isAdding ? currentCount + 1 : Math.max(0, currentCount - 1);
+    const reactions = (wish.reactions as Record<string, number>) ?? {};
+    const currentCount = reactions[emoji] ?? 0;
+    const newCount = isAdding
+      ? currentCount + 1
+      : Math.max(0, currentCount - 1);
 
-  if (newCount === 0) {
-    delete reactions[emoji];
-  } else {
-    reactions[emoji] = newCount;
+    if (newCount === 0) {
+      delete reactions[emoji];
+    } else {
+      reactions[emoji] = newCount;
+    }
+
+    await db.wish.update({ where: { id: wishId }, data: { reactions } });
+    return { success: true, count: newCount };
+  } catch (err) {
+    console.error("toggleReaction error:", err);
+    return { success: false, count: 0, error: safeErrorMessage(err) };
   }
-
-  await db.wish.update({ where: { id: wishId }, data: { reactions } });
-  return { success: true, count: newCount };
 }
 
 export async function addReaction(wishId: string, emoji: string) {

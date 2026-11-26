@@ -1,20 +1,25 @@
 import { NextRequest, NextResponse } from "next/server";
 import { put } from "@vercel/blob";
 
-const MAX_IMAGE_SIZE = 5 * 1024 * 1024; // 5MB
-const MAX_AUDIO_SIZE = 10 * 1024 * 1024; // 10MB
+const MAX_IMAGE_SIZE = 4.2 * 1024 * 1024; // 4.2MB (safely under Vercel's 4.5MB payload limit)
+const MAX_AUDIO_SIZE = 4.2 * 1024 * 1024; // 4.2MB (safely under Vercel's 4.5MB payload limit)
 const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/png",
   "image/webp",
   "image/gif",
+  "image/avif",
 ];
+const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"];
 const ALLOWED_AUDIO_TYPES = [
   "audio/mpeg",
   "audio/mp3",
+  "audio/x-mp3",
   "audio/wav",
   "audio/x-wav",
+  "audio/wave",
 ];
+const ALLOWED_AUDIO_EXTS = [".mp3", ".wav"];
 
 // In-memory rate limiter — resets per cold start (serverless-safe)
 // Key: `${deviceId}_${type}`, Value: { count, resetAt }
@@ -70,14 +75,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Validate file type
-    if (isPhoto && !ALLOWED_IMAGE_TYPES.includes(file.type)) {
+    // Validate file type (with extension fallback for browsers sending empty/generic MIME types)
+    const dotIdx = file.name.lastIndexOf(".");
+    const ext = dotIdx >= 0 ? file.name.slice(dotIdx).toLowerCase() : "";
+    const hasGenericMime =
+      !file.type || file.type === "application/octet-stream";
+
+    if (
+      isPhoto &&
+      !ALLOWED_IMAGE_TYPES.includes(file.type) &&
+      !(hasGenericMime && ALLOWED_IMAGE_EXTS.includes(ext))
+    ) {
       return NextResponse.json(
-        { error: "Invalid image format. Use JPEG, PNG, WebP, or GIF." },
+        {
+          error:
+            "Invalid image format. Supported formats: JPG, PNG, WebP, GIF, or AVIF.",
+        },
         { status: 400 },
       );
     }
-    if (isAudio && !ALLOWED_AUDIO_TYPES.includes(file.type)) {
+    if (
+      isAudio &&
+      !ALLOWED_AUDIO_TYPES.includes(file.type) &&
+      !(hasGenericMime && ALLOWED_AUDIO_EXTS.includes(ext))
+    ) {
       return NextResponse.json(
         { error: "Invalid audio format. Use MP3 or WAV." },
         { status: 400 },
@@ -87,13 +108,13 @@ export async function POST(request: NextRequest) {
     // Validate file size
     if (isPhoto && file.size > MAX_IMAGE_SIZE) {
       return NextResponse.json(
-        { error: "Image too large. Max 5MB." },
+        { error: "Image too large. Maximum size is 4MB." },
         { status: 400 },
       );
     }
     if (isAudio && file.size > MAX_AUDIO_SIZE) {
       return NextResponse.json(
-        { error: "Audio too large. Max 10MB." },
+        { error: "Audio too large. Maximum size is 4MB." },
         { status: 400 },
       );
     }

@@ -1,5 +1,7 @@
 import { getWishFormData } from "./actions";
 import { WishForm } from "@/components/wish-form";
+import { ServiceUnavailable } from "@/components/service-unavailable";
+import { safeErrorMessage } from "@/lib/errors";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 
@@ -9,28 +11,32 @@ export async function generateMetadata({
   params: Promise<{ token: string }>;
 }): Promise<Metadata> {
   const { token } = await params;
-  const event = await getWishFormData(token);
-  if (!event) return { title: "Not Found" };
+  try {
+    const event = await getWishFormData(token);
+    if (!event) return { title: "Not Found" };
 
-  const title = `Secret Birthday Wish for ${event.personName} 🎂 — BirthdayDrop`;
-  const description =
-    event.teaserMessage ||
-    `We're secretly collecting birthday wishes and memories for ${event.personName}'s birthday! Add yours before the surprise reveal.`;
+    const title = `Secret Birthday Wish for ${event.personName} 🎂 — BirthdayDrop`;
+    const description =
+      event.teaserMessage ||
+      `We're secretly collecting birthday wishes and memories for ${event.personName}'s birthday! Add yours before the surprise reveal.`;
 
-  return {
-    title,
-    description,
-    openGraph: {
+    return {
       title,
       description,
-      type: "website",
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-    },
-  };
+      openGraph: {
+        title,
+        description,
+        type: "website",
+      },
+      twitter: {
+        card: "summary_large_image",
+        title,
+        description,
+      },
+    };
+  } catch {
+    return { title: "Secret Birthday Wish — BirthdayDrop" };
+  }
 }
 
 export default async function WishPage({
@@ -39,7 +45,15 @@ export default async function WishPage({
   params: Promise<{ token: string }>;
 }) {
   const { token } = await params;
-  const event = await getWishFormData(token);
+  let event: Awaited<ReturnType<typeof getWishFormData>> = null;
+
+  try {
+    event = await getWishFormData(token);
+  } catch (err) {
+    console.error("WishPage load error:", err);
+    return <ServiceUnavailable message={safeErrorMessage(err)} />;
+  }
+
   if (!event) notFound();
 
   const isExpired = event.wishDeadline
@@ -58,7 +72,9 @@ export default async function WishPage({
       allowAnonymous={event.allowAnonymous}
       wishCount={event._count.wishes}
       isExpired={isExpired}
-      wishDeadline={event.wishDeadline ? event.wishDeadline.toISOString() : null}
+      wishDeadline={
+        event.wishDeadline ? event.wishDeadline.toISOString() : null
+      }
     />
   );
 }
