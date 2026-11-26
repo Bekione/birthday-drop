@@ -104,8 +104,15 @@ const ALLOWED_IMAGE_EXTS = [".jpg", ".jpeg", ".png", ".webp", ".gif", ".avif"];
 const MAX_UPLOAD_SIZE = 4.2 * 1024 * 1024; // 4.2MB (Vercel serverless limit is 4.5MB)
 
 async function compressImageIfNeeded(file: File): Promise<File> {
-  // If file is under 2MB or is GIF, skip canvas compression
-  if (file.size <= 2 * 1024 * 1024 || file.type === "image/gif") {
+  const lowerName = file.name.toLowerCase();
+  const isModernFormat =
+    file.type === "image/avif" ||
+    file.type === "image/webp" ||
+    lowerName.endsWith(".avif") ||
+    lowerName.endsWith(".webp");
+
+  // Skip canvas pass for GIFs (preserve animation) or small JPEG/PNG files
+  if (file.type === "image/gif" || (file.size <= 2 * 1024 * 1024 && !isModernFormat)) {
     return file;
   }
   return new Promise((resolve) => {
@@ -133,7 +140,8 @@ async function compressImageIfNeeded(file: File): Promise<File> {
       ctx.drawImage(img, 0, 0, width, height);
       canvas.toBlob(
         (blob) => {
-          if (blob && blob.size < file.size) {
+          // Always normalize WebP/AVIF to JPEG so OG social previews can render them too
+          if (blob && (isModernFormat ? blob.size <= MAX_UPLOAD_SIZE : blob.size < file.size)) {
             const compressed = new File(
               [blob],
               file.name.replace(/\.[^.]+$/, ".jpg"),
@@ -145,7 +153,7 @@ async function compressImageIfNeeded(file: File): Promise<File> {
           }
         },
         "image/jpeg",
-        0.88
+        0.9
       );
     };
     img.onerror = () => {

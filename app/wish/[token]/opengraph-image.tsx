@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
+import { loadOgPhotoDataUri } from "@/lib/og-photo";
 
 export const runtime = "nodejs";
 export const alt = "Secret Birthday Wish — BirthdayDrop";
@@ -39,7 +40,7 @@ export default async function Image({
 
   const personName = event?.personName || "Birthday Star";
   const birthDate = event?.birthDate || "";
-  const photoUrl = event?.personPhotoUrl;
+  const photoDataUri = await loadOgPhotoDataUri(event?.personPhotoUrl);
 
   const contextLabel =
     event?.celebrationType === "family"
@@ -49,6 +50,11 @@ export default async function Image({
         : event?.celebrationType === "workplace"
           ? "Team & Workplace Surprise"
           : "Secret Birthday Surprise";
+
+  const headline = `Secret Birthday Wish for ${personName}!`;
+  const subtitle = birthDate
+    ? `Leave your special wish before the big reveal on ${birthDate}!`
+    : "Leave your special wish and memories before the big reveal!";
 
   return new ImageResponse(
     (
@@ -60,7 +66,8 @@ export default async function Image({
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "linear-gradient(135deg, #3b0764 0%, #701a75 40%, #be185d 80%, #f59e0b 100%)",
+          background:
+            "linear-gradient(135deg, #3b0764 0%, #701a75 40%, #be185d 80%, #f59e0b 100%)",
           color: "white",
           padding: "50px 60px",
           fontFamily: "system-ui, -apple-system, sans-serif",
@@ -93,7 +100,7 @@ export default async function Image({
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
-            gap: "40px",
+            gap: "44px",
             width: "100%",
           }}
         >
@@ -103,8 +110,8 @@ export default async function Image({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              width: "170px",
-              height: "170px",
+              width: "180px",
+              height: "180px",
               borderRadius: "999px",
               border: "6px solid #fbbf24",
               background: "rgba(255, 255, 255, 0.15)",
@@ -112,15 +119,18 @@ export default async function Image({
               boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
             }}
           >
-            {photoUrl ? (
+            {photoDataUri ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={photoUrl}
+                src={photoDataUri}
                 alt={personName}
+                width={180}
+                height={180}
                 style={{
-                  width: "100%",
-                  height: "100%",
+                  width: "180px",
+                  height: "180px",
                   objectFit: "cover",
+                  borderRadius: "999px",
                 }}
               />
             ) : (
@@ -138,25 +148,25 @@ export default async function Image({
           >
             <div
               style={{
+                display: "flex",
                 fontSize: "52px",
                 fontWeight: 900,
                 lineHeight: 1.15,
                 textShadow: "0 4px 20px rgba(0,0,0,0.3)",
               }}
             >
-              Secret Birthday Wish for {personName}!
+              {headline}
             </div>
             <div
               style={{
+                display: "flex",
                 fontSize: "24px",
                 opacity: 0.92,
                 marginTop: "14px",
                 lineHeight: 1.35,
               }}
             >
-              {birthDate
-                ? `Leave your special wish before the big reveal on ${birthDate}!`
-                : "Leave your special wish and memories before the big reveal!"}
+              {subtitle}
             </div>
           </div>
         </div>
@@ -169,17 +179,25 @@ export default async function Image({
             justifyContent: "space-between",
             width: "100%",
             fontSize: "18px",
-            opacity: 0.85,
+            opacity: 0.9,
             borderTop: "1px solid rgba(255, 255, 255, 0.2)",
             paddingTop: "20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontWeight: 700,
+            }}
+          >
             <span>⚡</span>
             <span>BirthdayDrop • The Collective Birthday Card</span>
           </div>
           <div
             style={{
+              display: "flex",
               background: "rgba(255, 255, 255, 0.22)",
               padding: "6px 16px",
               borderRadius: "999px",
@@ -197,4 +215,3 @@ export default async function Image({
     },
   );
 }
-

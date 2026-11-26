@@ -1,5 +1,6 @@
 import { ImageResponse } from "next/og";
 import { db } from "@/lib/db";
+import { loadOgPhotoDataUri } from "@/lib/og-photo";
 
 export const runtime = "nodejs";
 export const alt = "Happy Birthday Surprise — BirthdayDrop";
@@ -35,7 +36,12 @@ export default async function Image({
 
   const personName = event?.personName || "Birthday Star";
   const birthDate = event?.birthDate || "";
-  const photoUrl = event?.personPhotoUrl;
+  const photoDataUri = await loadOgPhotoDataUri(event?.personPhotoUrl);
+
+  const headline = `Happy Birthday, ${personName}!`;
+  const subtitle = birthDate
+    ? `A special surprise reveal for ${birthDate} with all your birthday wishes!`
+    : "A special surprise reveal with all your birthday wishes!";
 
   return new ImageResponse(
     (
@@ -47,7 +53,8 @@ export default async function Image({
           flexDirection: "column",
           alignItems: "center",
           justifyContent: "space-between",
-          background: "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 35%, #9d174d 75%, #d97706 100%)",
+          background:
+            "linear-gradient(135deg, #1e1b4b 0%, #4c1d95 35%, #9d174d 75%, #d97706 100%)",
           color: "white",
           padding: "50px 60px",
           fontFamily: "system-ui, -apple-system, sans-serif",
@@ -79,7 +86,7 @@ export default async function Image({
             flexDirection: "row",
             alignItems: "center",
             justifyContent: "center",
-            gap: "40px",
+            gap: "44px",
             width: "100%",
           }}
         >
@@ -98,15 +105,18 @@ export default async function Image({
               boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
             }}
           >
-            {photoUrl ? (
+            {photoDataUri ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img
-                src={photoUrl}
+                src={photoDataUri}
                 alt={personName}
+                width={180}
+                height={180}
                 style={{
-                  width: "100%",
-                  height: "100%",
+                  width: "180px",
+                  height: "180px",
                   objectFit: "cover",
+                  borderRadius: "999px",
                 }}
               />
             ) : (
@@ -123,25 +133,25 @@ export default async function Image({
           >
             <div
               style={{
+                display: "flex",
                 fontSize: "56px",
                 fontWeight: 900,
                 lineHeight: 1.15,
                 textShadow: "0 4px 20px rgba(0,0,0,0.3)",
               }}
             >
-              Happy Birthday, {personName}!
+              {headline}
             </div>
             <div
               style={{
+                display: "flex",
                 fontSize: "24px",
                 opacity: 0.92,
                 marginTop: "14px",
                 lineHeight: 1.35,
               }}
             >
-              {birthDate
-                ? `A special surprise reveal for ${birthDate} with all your birthday wishes!`
-                : "A special surprise reveal with all your birthday wishes!"}
+              {subtitle}
             </div>
           </div>
         </div>
@@ -154,17 +164,25 @@ export default async function Image({
             justifyContent: "space-between",
             width: "100%",
             fontSize: "18px",
-            opacity: 0.85,
+            opacity: 0.9,
             borderTop: "1px solid rgba(255, 255, 255, 0.2)",
             paddingTop: "20px",
           }}
         >
-          <div style={{ display: "flex", alignItems: "center", gap: "8px", fontWeight: 700 }}>
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "8px",
+              fontWeight: 700,
+            }}
+          >
             <span>⚡</span>
             <span>BirthdayDrop</span>
           </div>
           <div
             style={{
+              display: "flex",
               background: "rgba(255, 255, 255, 0.22)",
               padding: "6px 18px",
               borderRadius: "999px",
@@ -182,4 +200,3 @@ export default async function Image({
     },
   );
 }
-

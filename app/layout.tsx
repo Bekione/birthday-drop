@@ -33,7 +33,14 @@ const adlam = ADLaM_Display({
   display: "swap",
 });
 
+const siteUrl =
+  process.env.NEXT_PUBLIC_SITE_URL ||
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : "https://birthday-drop.vercel.app");
+
 export const metadata: Metadata = {
+  metadataBase: new URL(siteUrl),
   title: "BirthdayDrop — Surprise the people you love 🎉",
   description:
     "Create a beautiful birthday surprise page, collect heartfelt wishes from colleagues or friends via a secret link, and reveal them all on the big day.",
@@ -47,7 +54,14 @@ export const metadata: Metadata = {
     title: "BirthdayDrop — Surprise the people you love 🎉",
     description:
       "Create a beautiful birthday surprise page and collect wishes from everyone!",
+    siteName: "BirthdayDrop",
     type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BirthdayDrop — Surprise the people you love 🎉",
+    description:
+      "Create a beautiful birthday surprise page and collect wishes from everyone!",
   },
 };
 
